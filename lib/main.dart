@@ -769,8 +769,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   }
 
   Future<void> _selectSuggestion(Map<String, dynamic> suggestion) async {
-    final displayName = suggestion['display_name'] as String? ?? '';
-    _addressController.text = displayName;
+    // Adresse normalisieren
+    final normalizedAddress = _normalizeAddress(suggestion);
+    _addressController.text = normalizedAddress;
 
     setState(() {
       _showSuggestions = false;
@@ -780,7 +781,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     // Geocode the selected address
     try {
       final service = NominatimService();
-      final center = await service.geocodeAddress(displayName);
+      final center = await service.geocodeAddress(normalizedAddress);
       service.dispose();
 
       if (center != null && mounted) {
@@ -794,6 +795,45 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         setState(() => _isGeocoding = false);
       }
     }
+  }
+
+  String _normalizeAddress(Map<String, dynamic> suggestion) {
+    final address = suggestion['address'] as Map<String, dynamic>?;
+
+    if (address == null) {
+      // Fallback: display_name verwenden
+      final displayName = suggestion['display_name'] as String? ?? '';
+      final parts = displayName.split(',');
+      if (parts.length >= 2) {
+        return '${parts[0].trim()}, ${parts[1].trim()}';
+      }
+      return displayName;
+    }
+
+    // Komponenten extrahieren
+    final road =
+        address['road'] as String? ??
+        address['pedestrian'] as String? ??
+        address['square'] as String? ??
+        address['place'] as String? ??
+        '';
+    final houseNumber = address['house_number'] as String? ?? '';
+    final postcode = address['postcode'] as String? ?? '';
+    final city =
+        address['city'] as String? ??
+        address['town'] as String? ??
+        address['village'] as String? ??
+        address['suburb'] as String? ??
+        'Berlin';
+
+    // Format: "Straße Hausnummer, PLZ Ort"
+    final streetPart = houseNumber.isNotEmpty ? '$road $houseNumber' : road;
+
+    if (postcode.isNotEmpty) {
+      return '$streetPart, $postcode $city';
+    }
+
+    return '$streetPart, $city';
   }
 
   Future<void> _animateToLocation(LatLng target) async {
@@ -982,26 +1022,76 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final suggestion = _suggestions[index];
+                        final address =
+                            suggestion['address'] as Map<String, dynamic>?;
+
+                        // Straße und Hausnummer
+                        final road =
+                            address?['road'] as String? ??
+                            address?['pedestrian'] as String? ??
+                            address?['square'] as String? ??
+                            address?['place'] as String? ??
+                            '';
+                        final houseNumber =
+                            address?['house_number'] as String? ?? '';
+                        final streetPart = houseNumber.isNotEmpty
+                            ? '$road $houseNumber'
+                            : road;
+
+                        // PLZ und Ort
+                        final postcode = address?['postcode'] as String? ?? '';
+                        final city =
+                            address?['city'] as String? ??
+                            address?['town'] as String? ??
+                            address?['suburb'] as String? ??
+                            'Berlin';
+
+                        // Bezirk für zusätzliche Info
+                        final suburb =
+                            address?['suburb'] as String? ??
+                            address?['neighbourhood'] as String? ??
+                            '';
+
+                        // Fallback wenn keine address-Daten
                         final displayName =
                             suggestion['display_name'] as String? ?? '';
-                        // Kürze den Namen für bessere Darstellung
                         final parts = displayName.split(',');
-                        final shortName = parts.take(2).join(',').trim();
-                        final location = parts.skip(2).take(2).join(',').trim();
+                        final fallbackStreet = parts.isNotEmpty
+                            ? parts[0].trim()
+                            : '';
+                        final fallbackLocation = parts.length > 1
+                            ? parts[1].trim()
+                            : '';
+
+                        final title = streetPart.isNotEmpty
+                            ? streetPart
+                            : fallbackStreet;
+                        final subtitleParts = <String>[];
+                        if (postcode.isNotEmpty && city.isNotEmpty) {
+                          subtitleParts.add('$postcode $city');
+                        } else if (fallbackLocation.isNotEmpty) {
+                          subtitleParts.add(fallbackLocation);
+                        }
+                        if (suburb.isNotEmpty) {
+                          subtitleParts.add(suburb);
+                        }
+                        final subtitle = subtitleParts.join(', ');
 
                         return ListTile(
                           dense: true,
                           title: Text(
-                            shortName,
+                            title,
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          subtitle: Text(
-                            location,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                          subtitle: subtitle.isNotEmpty
+                              ? Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                )
+                              : null,
                           onTap: () => _selectSuggestion(suggestion),
                         );
                       },
