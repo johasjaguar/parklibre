@@ -260,6 +260,15 @@ class _MapScreenState extends State<MapScreen> {
             });
           }
 
+          // Schließe Snackbar wenn Filter aktiv und Ergebnisse vorhanden
+          if (spotsModel.isFiltered && spotsModel.spots.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              }
+            });
+          }
+
           if (spotsModel.isLoading && spotsModel.spots.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -419,6 +428,17 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _showSpotDetails(BuildContext context, DisabledParkingSpot spot) {
+    // Berechne Entfernung zum Filter-Zentrum wenn Filter aktiv
+    final spotsModel = context.read<ParkingSpotsModel>();
+    String? distanceText;
+    if (spotsModel.isFiltered && spotsModel.currentFilter?.center != null) {
+      final distance = DistanceCalculator.calculateDistance(
+        spot.position,
+        spotsModel.currentFilter!.center!,
+      );
+      distanceText = DistanceCalculator.formatDistance(distance);
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -515,6 +535,12 @@ class _MapScreenState extends State<MapScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
+                      if (distanceText != null)
+                        _DetailCard(
+                          icon: Icons.social_distance,
+                          title: 'Entfernung (Luftlinie)',
+                          value: distanceText,
+                        ),
                       _DetailCard(
                         icon: Icons.location_city,
                         title: 'Bezirk',
