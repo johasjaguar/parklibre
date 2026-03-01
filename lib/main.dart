@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'models/disabled_parking_spot.dart';
 import 'services/berlin_parking_service.dart';
+import 'services/location_service.dart';
 
 void main() {
   runApp(const ParkLibreApp());
@@ -14,8 +15,11 @@ class ParkLibreApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ParkingSpotsModel(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ParkingSpotsModel()),
+        ChangeNotifierProvider(create: (_) => LocationModel()),
+      ],
       child: MaterialApp(
         title: 'ParkLibre',
         theme: ThemeData(
@@ -25,6 +29,61 @@ class ParkLibreApp extends StatelessWidget {
         home: const MapScreen(),
       ),
     );
+  }
+}
+
+class LocationModel extends ChangeNotifier {
+  final LocationService _service = LocationService();
+  LatLng? _currentLocation;
+  bool _isLoading = false;
+  String? _error;
+  bool _isTracking = false;
+
+  LatLng? get currentLocation => _currentLocation;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isTracking => _isTracking;
+
+  Future<void> getCurrentLocation() async {
+    if (_isLoading) return;
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final location = await _service.getCurrentLocation();
+      if (location != null) {
+        _currentLocation = location;
+      } else {
+        _error = 'Standort konnte nicht ermittelt werden';
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void startTracking() {
+    if (_isTracking) return;
+    _isTracking = true;
+    _service.startLocationUpdates((location) {
+      _currentLocation = location;
+      notifyListeners();
+    });
+  }
+
+  void stopTracking() {
+    _isTracking = false;
+    _service.stopLocationUpdates();
+  }
+
+  @override
+  void dispose() {
+    _service.dispose();
+    super.dispose();
   }
 }
 
@@ -72,6 +131,7 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   static const _berlinCenter = LatLng(52.52, 13.405);
   static const _initialZoom = 12.0;
+  static const _locateZoom = 14.5;
 
   final MapController _mapController = MapController();
 
@@ -93,6 +153,35 @@ class _MapScreenState extends State<MapScreen> {
     _mapController.rotate(0);
   }
 
+  Future<void> _animateToLocation(LatLng target) async {
+    _mapController.move(target, _locateZoom);
+  }
+
+  Future<void> _locateMe() async {
+    final locationModel = context.read<LocationModel>();
+
+    if (locationModel.currentLocation != null) {
+      await _animateToLocation(locationModel.currentLocation!);
+      return;
+    }
+
+    await locationModel.getCurrentLocation();
+
+    if (locationModel.currentLocation != null) {
+      await _animateToLocation(locationModel.currentLocation!);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(locationModel.error ?? 'Standort nicht verfügbar'),
+          action: SnackBarAction(
+            label: 'Berlin Mitte',
+            onPressed: () => _animateToLocation(_berlinCenter),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,21 +189,21 @@ class _MapScreenState extends State<MapScreen> {
         title: const Text('ParkLibre - Behindertenparkplätze Berlin'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Consumer<ParkingSpotsModel>(
-        builder: (context, model, child) {
-          if (model.isLoading && model.spots.isEmpty) {
+      body: Consumer2<ParkingSpotsModel, LocationModel>(
+        builder: (context, spotsModel, locationModel, child) {
+          if (spotsModel.isLoading && spotsModel.spots.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (model.error != null) {
+          if (spotsModel.error != null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Fehler: ${model.error}'),
+                  Text('Fehler: ${spotsModel.error}'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: model.loadSpots,
+                    onPressed: spotsModel.loadSpots,
                     child: const Text('Erneut laden'),
                   ),
                 ],
@@ -141,7 +230,7 @@ class _MapScreenState extends State<MapScreen> {
                     maxZoom: 19,
                   ),
                   MarkerLayer(
-                    markers: model.spots
+                    markers: spotsModel.spots
                         .map(
                           (spot) => Marker(
                             point: spot.position,
@@ -159,6 +248,18 @@ class _MapScreenState extends State<MapScreen> {
                         )
                         .toList(),
                   ),
+                  if (locationModel.currentLocation != null)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: locationModel.currentLocation!,
+                          radius: 12,
+                          color: Colors.blue.withValues(alpha: 0.3),
+                          borderColor: Colors.blue,
+                          borderStrokeWidth: 3,
+                        ),
+                      ],
+                    ),
                 ],
               ),
               Positioned(
@@ -179,17 +280,35 @@ class _MapScreenState extends State<MapScreen> {
                 bottom: 16,
                 left: 16,
                 child: Chip(
-                  label: Text('${model.spots.length} Parkplätze'),
+                  label: Text('${spotsModel.spots.length} Parkplätze'),
                   backgroundColor: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
+              if (locationModel.isLoading)
+                const Positioned(
+                  bottom: 80,
+                  right: 16,
+                  child: CircularProgressIndicator(),
+                ),
             ],
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.read<ParkingSpotsModel>().loadSpots(),
-        child: const Icon(Icons.refresh),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'locate',
+            onPressed: _locateMe,
+            child: const Icon(Icons.my_location),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            heroTag: 'refresh',
+            onPressed: () => context.read<ParkingSpotsModel>().loadSpots(),
+            child: const Icon(Icons.refresh),
+          ),
+        ],
       ),
     );
   }
