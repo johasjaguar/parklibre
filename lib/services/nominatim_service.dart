@@ -12,6 +12,46 @@ class NominatimService {
 
   NominatimService({http.Client? client}) : _client = client ?? http.Client();
 
+  /// Sucht Adressen mit Autocomplete (fuzzy search)
+  /// Rate-Limit: 1 Request pro Sekunde
+  Future<List<Map<String, dynamic>>> searchAddresses(
+    String query, {
+    int limit = 5,
+  }) async {
+    if (query.trim().isEmpty || query.length < 3) {
+      return [];
+    }
+
+    try {
+      final uri = Uri.parse('$_baseUrl/search').replace(
+        queryParameters: {
+          'q': '$query, Berlin, Deutschland',
+          'format': 'json',
+          'limit': limit.toString(),
+          'addressdetails': '1',
+          'accept-language': 'de',
+        },
+      );
+
+      final response = await _client.get(
+        uri,
+        headers: {'User-Agent': _userAgent},
+      );
+
+      if (response.statusCode != 200) {
+        throw NominatimException(
+          'Server antwortete mit Status ${response.statusCode}',
+        );
+      }
+
+      final data = json.decode(response.body) as List;
+      return data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      if (e is NominatimException) rethrow;
+      throw NominatimException('Fehler bei der Suche: $e');
+    }
+  }
+
   /// Geocodiert eine Adresse zu Koordinaten
   /// Rate-Limit: 1 Request pro Sekunde
   Future<LatLng?> geocodeAddress(String address) async {

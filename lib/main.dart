@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -623,7 +624,7 @@ class _MapScreenState extends State<MapScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const FilterBottomSheet(),
+      builder: (context) => FilterBottomSheet(mapController: _mapController),
     );
   }
 }
@@ -699,7 +700,9 @@ class _DetailCard extends StatelessWidget {
 }
 
 class FilterBottomSheet extends StatefulWidget {
-  const FilterBottomSheet({super.key});
+  final MapController mapController;
+
+  const FilterBottomSheet({super.key, required this.mapController});
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -710,13 +713,103 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   double _radius = 1000; // Default 1km
   final TextEditingController _addressController = TextEditingController();
   bool _isGeocoding = false;
+  bool _isSearching = false;
   bool _persistFilter = false;
   String? _errorMessage;
+  Timer? _debounceTimer;
+  List<Map<String, dynamic>> _suggestions = [];
+  bool _showSuggestions = false;
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _addressController.dispose();
     super.dispose();
+  }
+
+  void _onAddressChanged(String value) {
+    _debounceTimer?.cancel();
+
+    if (value.length < 3) {
+      setState(() {
+        _suggestions = [];
+        _showSuggestions = false;
+      });
+      return;
+    }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _searchAddressSuggestions(value);
+    });
+  }
+
+  Future<void> _searchAddressSuggestions(String query) async {
+    setState(() => _isSearching = true);
+
+    try {
+      final service = NominatimService();
+      final results = await service.searchAddresses(query, limit: 5);
+      service.dispose();
+
+      if (mounted) {
+        setState(() {
+          _suggestions = results;
+          _showSuggestions = results.isNotEmpty;
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+          _showSuggestions = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectSuggestion(Map<String, dynamic> suggestion) async {
+    final displayName = suggestion['display_name'] as String? ?? '';
+    _addressController.text = displayName;
+
+    setState(() {
+      _showSuggestions = false;
+      _isGeocoding = true;
+    });
+
+    // Geocode the selected address
+    try {
+      final service = NominatimService();
+      final center = await service.geocodeAddress(displayName);
+      service.dispose();
+
+      if (center != null && mounted) {
+        // Kamera zur Adresse fliegen lassen
+        await _animateToLocation(center);
+      }
+    } catch (e) {
+      // Fehler ignorieren
+    } finally {
+      if (mounted) {
+        setState(() => _isGeocoding = false);
+      }
+    }
+  }
+
+  Future<void> _animateToLocation(LatLng target) async {
+    // Animation mit mehreren Schritten für "schönen Flug"
+    const duration = Duration(milliseconds: 1200);
+    final startZoom = widget.mapController.camera.zoom;
+    final targetZoom = 16.0;
+
+    // Step 1: Zoom out leicht
+    widget.mapController.move(target, startZoom > 12 ? 12 : startZoom);
+
+    // Kurze Pause
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Step 2: Move to target with zoom
+    widget.mapController.move(target, targetZoom);
   }
 
   Future<void> _applyFilter() async {
@@ -725,7 +818,22 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
     if (_mode == FilterMode.currentLocation) {
       final locationModel = context.read<LocationModel>();
+
+      // Automatisch Standort ermitteln wenn nicht verfügbar
+      if (locationModel.currentLocation == null) {
+        await locationModel.getCurrentLocation();
+      }
+
       center = locationModel.currentLocation ?? const LatLng(52.52, 13.405);
+
+      if (locationModel.currentLocation == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Standort nicht verfügbar, verwende Berlin Mitte'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } else {
       if (_addressController.text.trim().isEmpty) {
         setState(() => _errorMessage = 'Bitte Adresse eingeben');
@@ -823,7 +931,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 ],
                 selected: {_mode},
                 onSelectionChanged: (value) {
-                  setState(() => _mode = value.first);
+                  setState(() {
+                    _mode = value.first;
+                    if (_mode == FilterMode.currentLocation) {
+                      _showSuggestions = false;
+                    }
+                  });
                 },
               ),
               const SizedBox(height: 24),
@@ -831,11 +944,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               if (_mode == FilterMode.targetAddress) ...[
                 TextField(
                   controller: _addressController,
+                  onChanged: _onAddressChanged,
                   decoration: InputDecoration(
                     labelText: 'Zieladresse',
                     hintText: 'z.B. Alexanderplatz 1',
                     prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _isGeocoding
+                    suffixIcon: _isSearching || _isGeocoding
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -845,6 +959,54 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     errorText: _errorMessage,
                   ),
                 ),
+                // Vorschläge-Liste
+                if (_showSuggestions && _suggestions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _suggestions.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final suggestion = _suggestions[index];
+                        final displayName =
+                            suggestion['display_name'] as String? ?? '';
+                        // Kürze den Namen für bessere Darstellung
+                        final parts = displayName.split(',');
+                        final shortName = parts.take(2).join(',').trim();
+                        final location = parts.skip(2).take(2).join(',').trim();
+
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            shortName,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          subtitle: Text(
+                            location,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          onTap: () => _selectSuggestion(suggestion),
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 16),
               ],
               // Radius Slider
