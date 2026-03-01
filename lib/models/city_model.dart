@@ -64,9 +64,9 @@ class CityModel extends ChangeNotifier {
   }
 
   void _switchCity(CityConfig city) {
-    // Dispose alten Service
-    _service?.dispose();
-    _service = null;
+    // Erstelle neuen Service - alter Service wird später garbage collected
+    // Nicht sofort disposed wegen möglicher offener Requests
+    _service = _createService(city);
 
     _currentCity = city;
     notifyListeners();
