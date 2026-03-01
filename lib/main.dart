@@ -323,112 +323,152 @@ class _MapScreenState extends State<MapScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.8,
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
         expand: false,
         builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle für Mobile
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                // Header
-                Row(
+          return Column(
+            children: [
+              // Header-Bereich (nicht scrollbar)
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.accessible,
-                        color: Colors.blue,
-                        size: 32,
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Behindertenparkplatz',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey[600]),
+                    // Icon + Titel + Adresse mit PLZ
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          Text(
-                            spot.location,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                          child: const Icon(
+                            Icons.accessible,
+                            color: Colors.blue,
+                            size: 32,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Behindertenparkplatz',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: Colors.grey[600]),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                spot.location,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 18,
+                                    ),
+                              ),
+                              if (spot.postalCode != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    '${spot.postalCode} Berlin',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                // Details
-                _DetailCard(
-                  icon: Icons.location_city,
-                  title: 'Bezirk',
-                  value: spot.district,
+              ),
+              // Scrollbare Details
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      _DetailCard(
+                        icon: Icons.location_city,
+                        title: 'Bezirk',
+                        value: spot.district,
+                      ),
+                      if (spot.neighborhood != null)
+                        _DetailCard(
+                          icon: Icons.place,
+                          title: 'Ortsteil',
+                          value: spot.neighborhood!,
+                        ),
+                      _DetailCard(
+                        icon: Icons.local_parking,
+                        title: 'Stellplätze',
+                        value:
+                            '${spot.count} ${spot.count == 1 ? 'Platz' : 'Plätze'}',
+                      ),
+                      if (spot.lastUpdated != null)
+                        _DetailCard(
+                          icon: Icons.update,
+                          title: 'Letzte Aktualisierung',
+                          value:
+                              '${spot.lastUpdated!.day}.${spot.lastUpdated!.month}.${spot.lastUpdated!.year}',
+                        ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
-                if (spot.neighborhood != null)
-                  _DetailCard(
-                    icon: Icons.place,
-                    title: 'Ortsteil',
-                    value: spot.neighborhood!,
-                  ),
-                _DetailCard(
-                  icon: Icons.local_parking,
-                  title: 'Stellplätze',
-                  value:
-                      '${spot.count} ${spot.count == 1 ? 'Platz' : 'Plätze'}',
+              ),
+              // Fixed Button-Bereich
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
                 ),
-                if (spot.postalCode != null)
-                  _DetailCard(
-                    icon: Icons.markunread_mailbox,
-                    title: 'PLZ',
-                    value: spot.postalCode!,
-                  ),
-                if (spot.lastUpdated != null)
-                  _DetailCard(
-                    icon: Icons.update,
-                    title: 'Letzte Aktualisierung',
-                    value:
-                        '${spot.lastUpdated!.day}.${spot.lastUpdated!.month}.${spot.lastUpdated!.year}',
-                  ),
-                const SizedBox(height: 24),
-                // Navigation Button
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () => _navigateToSpot(spot),
-                    icon: const Icon(Icons.navigation),
-                    label: const Text('Navigation starten'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => _navigateToSpot(spot),
+                      icon: const Icon(Icons.navigation),
+                      label: const Text('Navigation starten'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
