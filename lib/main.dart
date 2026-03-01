@@ -464,10 +464,10 @@ class _MapScreenState extends State<MapScreen> {
       // Ignoriere Fehler, versuche nächste Option
     }
 
-    // Versuche 2: Google Maps Intent (android.intent.action.VIEW)
+    // Versuche 2: Google Maps Navigation Intent (Routenplanung)
     try {
       final mapsUri = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
       );
       final launched = await launchUrl(
         mapsUri,
