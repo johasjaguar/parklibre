@@ -101,13 +101,15 @@ class ParkingSpotsModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   FilterCriteria? _currentFilter;
+  bool _isFilterActive =
+      false; // NEU: Unterscheidet "kein Filter" von "Filter mit 0 Ergebnissen"
 
   List<DisabledParkingSpot> get spots =>
-      _filteredSpots.isEmpty ? _spots : _filteredSpots;
+      _isFilterActive ? _filteredSpots : _spots;
   List<DisabledParkingSpot> get allSpots => _spots;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isFiltered => _filteredSpots.isNotEmpty;
+  bool get isFiltered => _isFilterActive; // Geändert: Nutzt _isFilterActive
   FilterCriteria? get currentFilter => _currentFilter;
 
   Future<void> loadSpots() async {
@@ -120,6 +122,7 @@ class ParkingSpotsModel extends ChangeNotifier {
     try {
       _spots = await _service.fetchAllSpots();
       _filteredSpots = [];
+      _isFilterActive = false;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -144,6 +147,7 @@ class ParkingSpotsModel extends ChangeNotifier {
     }
 
     _currentFilter = filter;
+    _isFilterActive = true; // NEU: Filter ist aktiv
     _filteredSpots = _spots.where((spot) {
       final distance = DistanceCalculator.calculateDistance(
         spot.position,
@@ -157,6 +161,7 @@ class ParkingSpotsModel extends ChangeNotifier {
 
   void clearFilter() {
     _currentFilter = null;
+    _isFilterActive = false; // NEU: Filter deaktiviert
     _filteredSpots = [];
     notifyListeners();
   }
@@ -238,6 +243,27 @@ class _MapScreenState extends State<MapScreen> {
       ),
       body: Consumer2<ParkingSpotsModel, LocationModel>(
         builder: (context, spotsModel, locationModel, child) {
+          // Zeige Snackbar wenn Filter aktiv aber keine Ergebnisse
+          if (spotsModel.isFiltered &&
+              spotsModel.spots.isEmpty &&
+              spotsModel.currentFilter != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Keine Parkplätze im Umkreis von ${spotsModel.currentFilter!.radiusLabel} gefunden',
+                    ),
+                    action: SnackBarAction(
+                      label: 'Filter zurücksetzen',
+                      onPressed: () => spotsModel.clearFilter(),
+                    ),
+                  ),
+                );
+              }
+            });
+          }
+
           if (spotsModel.isLoading && spotsModel.spots.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -352,8 +378,19 @@ class _MapScreenState extends State<MapScreen> {
                 bottom: 16,
                 left: 16,
                 child: Chip(
-                  label: Text('${spotsModel.spots.length} Parkplätze'),
-                  backgroundColor: Colors.white.withValues(alpha: 0.9),
+                  label: Text(
+                    spotsModel.isFiltered
+                        ? (spotsModel.spots.isEmpty
+                              ? 'Keine Parkplätze im Umkreis'
+                              : '${spotsModel.spots.length} Parkplätze im Filter')
+                        : '${spotsModel.spots.length} Parkplätze',
+                  ),
+                  backgroundColor: spotsModel.isFiltered
+                      ? (spotsModel.spots.isEmpty
+                                ? Colors.orange
+                                : Colors.green)
+                            .withValues(alpha: 0.9)
+                      : Colors.white.withValues(alpha: 0.9),
                 ),
               ),
               if (locationModel.isLoading)
