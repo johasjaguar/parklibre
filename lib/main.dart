@@ -431,12 +431,20 @@ class _MapScreenState extends State<MapScreen> {
     // Berechne Entfernung zum Filter-Zentrum wenn Filter aktiv
     final spotsModel = context.read<ParkingSpotsModel>();
     String? distanceText;
+    String distanceTitle = 'Entfernung (Luftlinie)';
     if (spotsModel.isFiltered && spotsModel.currentFilter?.center != null) {
       final distance = DistanceCalculator.calculateDistance(
         spot.position,
         spotsModel.currentFilter!.center!,
       );
       distanceText = DistanceCalculator.formatDistance(distance);
+
+      // Anpassen des Titels je nach Filter-Modus
+      if (spotsModel.currentFilter!.mode == FilterMode.currentLocation) {
+        distanceTitle = 'Entfernung zu deinem Standort';
+      } else if (spotsModel.currentFilter!.mode == FilterMode.targetAddress) {
+        distanceTitle = 'Entfernung zur Zieladresse';
+      }
     }
 
     showModalBottomSheet(
@@ -538,7 +546,7 @@ class _MapScreenState extends State<MapScreen> {
                       if (distanceText != null)
                         _DetailCard(
                           icon: Icons.social_distance,
-                          title: 'Entfernung (Luftlinie)',
+                          title: distanceTitle,
                           value: distanceText,
                         ),
                       _DetailCard(
