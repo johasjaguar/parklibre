@@ -201,10 +201,6 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  void _resetToNorth() {
-    _mapController.rotate(0);
-  }
-
   Future<void> _animateToLocation(LatLng target) async {
     _mapController.move(target, _locateZoom);
   }
@@ -359,20 +355,6 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                 ],
-              ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Column(
-                  children: [
-                    FloatingActionButton.small(
-                      heroTag: 'compass',
-                      onPressed: _resetToNorth,
-                      child: const Icon(Icons.compass_calibration),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
               ),
               Positioned(
                 bottom: 16,
@@ -790,16 +772,30 @@ class FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
-  FilterMode _mode = FilterMode.currentLocation;
-  double _radius = 1000; // Default 1km
+  late FilterMode _mode;
+  late double _radius;
   final TextEditingController _addressController = TextEditingController();
   bool _isGeocoding = false;
   bool _isSearching = false;
-  bool _persistFilter = false;
   String? _errorMessage;
   Timer? _debounceTimer;
   List<Map<String, dynamic>> _suggestions = [];
   bool _showSuggestions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lade aktuelle Filter-Einstellungen
+    final currentFilter = context.read<ParkingSpotsModel>().currentFilter;
+    if (currentFilter != null) {
+      _mode = currentFilter.mode;
+      _radius = currentFilter.radiusMeters;
+      _addressController.text = currentFilter.address ?? '';
+    } else {
+      _mode = FilterMode.currentLocation;
+      _radius = 1000; // Default 1km
+    }
+  }
 
   @override
   void dispose() {
@@ -989,7 +985,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       radiusMeters: _radius,
       center: center,
       address: address,
-      persistFilter: _persistFilter,
     );
 
     context.read<ParkingSpotsModel>().applyFilter(filter);
@@ -1217,15 +1212,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     onSelected: (_) => setState(() => _radius = radius),
                   );
                 }).toList(),
-              ),
-              const SizedBox(height: 16),
-              // Persistenz-Checkbox
-              CheckboxListTile(
-                title: const Text('Filter merken'),
-                subtitle: const Text('Beim nächsten Start wieder anwenden'),
-                value: _persistFilter,
-                onChanged: (value) =>
-                    setState(() => _persistFilter = value ?? false),
               ),
               const SizedBox(height: 24),
               // Ergebnis-Info
