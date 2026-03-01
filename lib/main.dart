@@ -277,6 +277,9 @@ class _MapScreenState extends State<MapScreen> {
                     maxZoom: 19,
                   ),
                   MarkerLayer(
+                    key: ValueKey(
+                      'markers_${spotsModel.isFiltered}_${spotsModel.spots.length}',
+                    ),
                     markers: spotsModel.spots
                         .map(
                           (spot) => Marker(
@@ -284,12 +287,16 @@ class _MapScreenState extends State<MapScreen> {
                             point: spot.position,
                             width: 40,
                             height: 40,
-                            child: GestureDetector(
-                              onTap: () => _showSpotDetails(context, spot),
-                              child: const Icon(
-                                Icons.accessible,
-                                color: Colors.blue,
-                                size: 32,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _showSpotDetails(context, spot),
+                                borderRadius: BorderRadius.circular(20),
+                                child: const Icon(
+                                  Icons.accessible,
+                                  color: Colors.blue,
+                                  size: 32,
+                                ),
                               ),
                             ),
                           ),
