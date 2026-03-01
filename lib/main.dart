@@ -40,7 +40,7 @@ class ParkingSpotsModel extends ChangeNotifier {
 
   Future<void> loadSpots() async {
     if (_isLoading) return;
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -73,12 +73,24 @@ class _MapScreenState extends State<MapScreen> {
   static const _berlinCenter = LatLng(52.52, 13.405);
   static const _initialZoom = 12.0;
 
+  final MapController _mapController = MapController();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ParkingSpotsModel>().loadSpots();
     });
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  void _resetToNorth() {
+    _mapController.rotate(0);
   }
 
   @override
@@ -113,32 +125,55 @@ class _MapScreenState extends State<MapScreen> {
           return Stack(
             children: [
               FlutterMap(
+                mapController: _mapController,
                 options: MapOptions(
                   initialCenter: _berlinCenter,
                   initialZoom: _initialZoom,
+                  interactionOptions: const InteractionOptions(
+                    rotationThreshold: 100.0,
+                  ),
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'de.parklibre',
                     maxZoom: 19,
                   ),
                   MarkerLayer(
-                    markers: model.spots.map((spot) => Marker(
-                      point: spot.position,
-                      width: 40,
-                      height: 40,
-                      child: GestureDetector(
-                        onTap: () => _showSpotDetails(context, spot),
-                        child: const Icon(
-                          Icons.accessible,
-                          color: Colors.blue,
-                          size: 32,
-                        ),
-                      ),
-                    )).toList(),
+                    markers: model.spots
+                        .map(
+                          (spot) => Marker(
+                            point: spot.position,
+                            width: 40,
+                            height: 40,
+                            child: GestureDetector(
+                              onTap: () => _showSpotDetails(context, spot),
+                              child: const Icon(
+                                Icons.accessible,
+                                color: Colors.blue,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Column(
+                  children: [
+                    FloatingActionButton.small(
+                      heroTag: 'compass',
+                      onPressed: _resetToNorth,
+                      child: const Icon(Icons.compass_calibration),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
               Positioned(
                 bottom: 16,
@@ -195,7 +230,8 @@ class _MapScreenState extends State<MapScreen> {
             if (spot.lastUpdated != null)
               _InfoRow(
                 icon: Icons.update,
-                text: 'Aktualisiert: ${spot.lastUpdated!.toLocal().toString().split(' ')[0]}',
+                text:
+                    'Aktualisiert: ${spot.lastUpdated!.toLocal().toString().split(' ')[0]}',
               ),
           ],
         ),
