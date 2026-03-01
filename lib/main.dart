@@ -130,7 +130,7 @@ class _MapScreenState extends State<MapScreen> {
                   initialCenter: _berlinCenter,
                   initialZoom: _initialZoom,
                   interactionOptions: const InteractionOptions(
-                    rotationThreshold: 100.0,
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
                 ),
                 children: [
