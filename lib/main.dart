@@ -280,6 +280,7 @@ class _MapScreenState extends State<MapScreen> {
                     markers: spotsModel.spots
                         .map(
                           (spot) => Marker(
+                            key: ValueKey(spot.id),
                             point: spot.position,
                             width: 40,
                             height: 40,
@@ -624,8 +625,37 @@ class _MapScreenState extends State<MapScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => FilterBottomSheet(mapController: _mapController),
+      builder: (context) => FilterBottomSheet(
+        mapController: _mapController,
+        onFilterApplied: (center, radius) {
+          // Zoom to show entire radius
+          _zoomToRadius(center, radius);
+        },
+      ),
     );
+  }
+
+  void _zoomToRadius(LatLng center, double radiusMeters) {
+    // Calculate zoom level to show the entire radius
+    // Formula: zoom = 16 - log2(radius / 500)
+    // At radius 500m: zoom ~16
+    // At radius 5000m: zoom ~13
+    double zoom;
+    if (radiusMeters <= 100) {
+      zoom = 17;
+    } else if (radiusMeters <= 200) {
+      zoom = 16;
+    } else if (radiusMeters <= 500) {
+      zoom = 15;
+    } else if (radiusMeters <= 1000) {
+      zoom = 14;
+    } else if (radiusMeters <= 2000) {
+      zoom = 13;
+    } else {
+      zoom = 12;
+    }
+
+    _mapController.move(center, zoom);
   }
 }
 
@@ -701,8 +731,13 @@ class _DetailCard extends StatelessWidget {
 
 class FilterBottomSheet extends StatefulWidget {
   final MapController mapController;
+  final Function(LatLng center, double radius)? onFilterApplied;
 
-  const FilterBottomSheet({super.key, required this.mapController});
+  const FilterBottomSheet({
+    super.key,
+    required this.mapController,
+    this.onFilterApplied,
+  });
 
   @override
   State<FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -912,6 +947,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
 
     context.read<ParkingSpotsModel>().applyFilter(filter);
+
+    // Callback für Zoom auf Radius
+    if (widget.onFilterApplied != null && center != null) {
+      widget.onFilterApplied!(center, _radius);
+    }
+
     Navigator.pop(context);
   }
 
