@@ -1107,6 +1107,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         final address =
                             suggestion['address'] as Map<String, dynamic>?;
 
+                        // Fallback: display_name
+                        final displayName =
+                            suggestion['display_name'] as String? ?? '';
+
                         // Straße und Hausnummer
                         final road =
                             address?['road'] as String? ??
@@ -1119,6 +1123,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         final streetPart = houseNumber.isNotEmpty
                             ? '$road $houseNumber'
                             : road;
+
+                        // Venue/POI Name extrahieren (z.B. "Kaufland", "Alexanderplatz")
+                        final poiName =
+                            suggestion['name'] as String? ??
+                            address?['name'] as String? ??
+                            (address?['shop'] != null ||
+                                    address?['amenity'] != null
+                                ? displayName.split(',').first.trim()
+                                : '');
 
                         // PLZ und Ort
                         final postcode = address?['postcode'] as String? ?? '';
@@ -1135,8 +1148,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             '';
 
                         // Fallback wenn keine address-Daten
-                        final displayName =
-                            suggestion['display_name'] as String? ?? '';
                         final parts = displayName.split(',');
                         final fallbackStreet = parts.isNotEmpty
                             ? parts[0].trim()
@@ -1145,9 +1156,18 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             ? parts[1].trim()
                             : '';
 
-                        final title = streetPart.isNotEmpty
-                            ? streetPart
-                            : fallbackStreet;
+                        // Titel: Wenn POI-Name vorhanden, zeige "Venue, Adresse", sonst nur Adresse
+                        String title;
+                        if (poiName.isNotEmpty && streetPart.isNotEmpty) {
+                          title = '$poiName, $streetPart';
+                        } else if (poiName.isNotEmpty) {
+                          title = poiName;
+                        } else {
+                          title = streetPart.isNotEmpty
+                              ? streetPart
+                              : fallbackStreet;
+                        }
+
                         final subtitleParts = <String>[];
                         if (postcode.isNotEmpty && city.isNotEmpty) {
                           subtitleParts.add('$postcode $city');
