@@ -40,7 +40,7 @@ class ParkingSpotsModel extends ChangeNotifier {
 
   Future<void> loadSpots() async {
     if (_isLoading) return;
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -116,27 +116,35 @@ class _MapScreenState extends State<MapScreen> {
                 options: MapOptions(
                   initialCenter: _berlinCenter,
                   initialZoom: _initialZoom,
+                  interactionOptions: const InteractionOptions(
+                    rotationThreshold: 100.0,
+                  ),
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'de.parklibre',
                     maxZoom: 19,
                   ),
                   MarkerLayer(
-                    markers: model.spots.map((spot) => Marker(
-                      point: spot.position,
-                      width: 40,
-                      height: 40,
-                      child: GestureDetector(
-                        onTap: () => _showSpotDetails(context, spot),
-                        child: const Icon(
-                          Icons.accessible,
-                          color: Colors.blue,
-                          size: 32,
-                        ),
-                      ),
-                    )).toList(),
+                    markers: model.spots
+                        .map(
+                          (spot) => Marker(
+                            point: spot.position,
+                            width: 40,
+                            height: 40,
+                            child: GestureDetector(
+                              onTap: () => _showSpotDetails(context, spot),
+                              child: const Icon(
+                                Icons.accessible,
+                                color: Colors.blue,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
@@ -195,7 +203,8 @@ class _MapScreenState extends State<MapScreen> {
             if (spot.lastUpdated != null)
               _InfoRow(
                 icon: Icons.update,
-                text: 'Aktualisiert: ${spot.lastUpdated!.toLocal().toString().split(' ')[0]}',
+                text:
+                    'Aktualisiert: ${spot.lastUpdated!.toLocal().toString().split(' ')[0]}',
               ),
           ],
         ),
