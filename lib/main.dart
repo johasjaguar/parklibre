@@ -1,12 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide DistanceCalculator;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/disabled_parking_spot.dart';
+import 'models/filter_criteria.dart';
 import 'services/berlin_parking_service.dart';
 import 'services/location_service.dart';
+import 'services/nominatim_service.dart';
+import 'utils/distance_calculator.dart';
 
 void main() {
   runApp(const ParkLibreApp());
@@ -92,12 +96,18 @@ class LocationModel extends ChangeNotifier {
 class ParkingSpotsModel extends ChangeNotifier {
   final BerlinParkingService _service = BerlinParkingService();
   List<DisabledParkingSpot> _spots = [];
+  List<DisabledParkingSpot> _filteredSpots = [];
   bool _isLoading = false;
   String? _error;
+  FilterCriteria? _currentFilter;
 
-  List<DisabledParkingSpot> get spots => _spots;
+  List<DisabledParkingSpot> get spots =>
+      _filteredSpots.isEmpty ? _spots : _filteredSpots;
+  List<DisabledParkingSpot> get allSpots => _spots;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isFiltered => _filteredSpots.isNotEmpty;
+  FilterCriteria? get currentFilter => _currentFilter;
 
   Future<void> loadSpots() async {
     if (_isLoading) return;
@@ -108,12 +118,46 @@ class ParkingSpotsModel extends ChangeNotifier {
 
     try {
       _spots = await _service.fetchAllSpots();
+      _filteredSpots = [];
     } catch (e) {
       _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void applyFilter(FilterCriteria filter) {
+    if (!filter.isValid) {
+      clearFilter();
+      return;
+    }
+
+    final center = filter.mode == FilterMode.currentLocation
+        ? filter.center
+        : filter.center;
+
+    if (center == null) {
+      clearFilter();
+      return;
+    }
+
+    _currentFilter = filter;
+    _filteredSpots = _spots.where((spot) {
+      final distance = DistanceCalculator.calculateDistance(
+        spot.position,
+        center,
+      );
+      return distance <= filter.radiusMeters;
+    }).toList();
+
+    notifyListeners();
+  }
+
+  void clearFilter() {
+    _currentFilter = null;
+    _filteredSpots = [];
+    notifyListeners();
   }
 
   @override
@@ -262,6 +306,21 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ],
                     ),
+                  // Radius-Kreis wenn Filter aktiv
+                  if (spotsModel.isFiltered &&
+                      spotsModel.currentFilter?.center != null)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: spotsModel.currentFilter!.center!,
+                          radius: spotsModel.currentFilter!.radiusMeters,
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderColor: Colors.orange,
+                          borderStrokeWidth: 2,
+                          useRadiusInMeter: true,
+                        ),
+                      ],
+                    ),
                 ],
               ),
               Positioned(
@@ -299,6 +358,20 @@ class _MapScreenState extends State<MapScreen> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Filter-Button
+          Consumer<ParkingSpotsModel>(
+            builder: (context, model, _) {
+              return FloatingActionButton(
+                heroTag: 'filter',
+                onPressed: () => _showFilterSheet(context),
+                backgroundColor: model.isFiltered ? Colors.orange : null,
+                child: Icon(
+                  model.isFiltered ? Icons.filter_list_off : Icons.filter_list,
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
           FloatingActionButton(
             heroTag: 'locate',
             onPressed: _locateMe,
@@ -542,6 +615,17 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
   }
+
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const FilterBottomSheet(),
+    );
+  }
 }
 
 class _InfoRow extends StatelessWidget {
@@ -610,6 +694,241 @@ class _DetailCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class FilterBottomSheet extends StatefulWidget {
+  const FilterBottomSheet({super.key});
+
+  @override
+  State<FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<FilterBottomSheet> {
+  FilterMode _mode = FilterMode.currentLocation;
+  double _radius = 1000; // Default 1km
+  final TextEditingController _addressController = TextEditingController();
+  bool _isGeocoding = false;
+  bool _persistFilter = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _applyFilter() async {
+    LatLng? center;
+    String? address;
+
+    if (_mode == FilterMode.currentLocation) {
+      final locationModel = context.read<LocationModel>();
+      center = locationModel.currentLocation ?? const LatLng(52.52, 13.405);
+    } else {
+      if (_addressController.text.trim().isEmpty) {
+        setState(() => _errorMessage = 'Bitte Adresse eingeben');
+        return;
+      }
+
+      setState(() {
+        _isGeocoding = true;
+        _errorMessage = null;
+      });
+
+      try {
+        final service = NominatimService();
+        center = await service.geocodeAddress(_addressController.text.trim());
+        service.dispose();
+
+        if (center == null) {
+          setState(() => _errorMessage = 'Adresse nicht gefunden');
+          return;
+        }
+        address = _addressController.text.trim();
+      } catch (e) {
+        setState(() => _errorMessage = 'Fehler: $e');
+        return;
+      } finally {
+        setState(() => _isGeocoding = false);
+      }
+    }
+
+    final filter = FilterCriteria(
+      mode: _mode,
+      radiusMeters: _radius,
+      center: center,
+      address: address,
+      persistFilter: _persistFilter,
+    );
+
+    context.read<ParkingSpotsModel>().applyFilter(filter);
+    Navigator.pop(context);
+  }
+
+  void _clearFilter() {
+    context.read<ParkingSpotsModel>().clearFilter();
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final spotsModel = context.watch<ParkingSpotsModel>();
+    final locationModel = context.watch<LocationModel>();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Titel
+              Text(
+                'Parkplätze filtern',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 24),
+              // Modus-Auswahl
+              SegmentedButton<FilterMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: FilterMode.currentLocation,
+                    label: Text('Meine Position'),
+                    icon: Icon(Icons.my_location),
+                  ),
+                  ButtonSegment(
+                    value: FilterMode.targetAddress,
+                    label: Text('Adresse'),
+                    icon: Icon(Icons.location_on),
+                  ),
+                ],
+                selected: {_mode},
+                onSelectionChanged: (value) {
+                  setState(() => _mode = value.first);
+                },
+              ),
+              const SizedBox(height: 24),
+              // Adress-Eingabe (nur bei targetAddress)
+              if (_mode == FilterMode.targetAddress) ...[
+                TextField(
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: 'Zieladresse',
+                    hintText: 'z.B. Alexanderplatz 1',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _isGeocoding
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                    errorText: _errorMessage,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              // Radius Slider
+              Text(
+                'Umkreis: ${FilterCriteria(radiusMeters: _radius, mode: _mode).radiusLabel}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Slider(
+                value: _radius,
+                min: 50,
+                max: 5000,
+                divisions: 6,
+                label: FilterCriteria(
+                  radiusMeters: _radius,
+                  mode: _mode,
+                ).radiusLabel,
+                onChanged: (value) => setState(() => _radius = value),
+              ),
+              // Radius Optionen als Chips
+              Wrap(
+                spacing: 8,
+                children: FilterCriteria.radiusOptions.map((radius) {
+                  return ChoiceChip(
+                    label: Text(
+                      FilterCriteria(
+                        radiusMeters: radius,
+                        mode: _mode,
+                      ).radiusLabel,
+                    ),
+                    selected: _radius == radius,
+                    onSelected: (_) => setState(() => _radius = radius),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              // Persistenz-Checkbox
+              CheckboxListTile(
+                title: const Text('Filter merken'),
+                subtitle: const Text('Beim nächsten Start wieder anwenden'),
+                value: _persistFilter,
+                onChanged: (value) =>
+                    setState(() => _persistFilter = value ?? false),
+              ),
+              const SizedBox(height: 24),
+              // Ergebnis-Info
+              if (spotsModel.isFiltered)
+                Text(
+                  'Aktuell: ${spotsModel.spots.length} von ${spotsModel.allSpots.length} Parkplätzen',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              const SizedBox(height: 16),
+              // Buttons
+              Row(
+                children: [
+                  if (spotsModel.isFiltered)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _clearFilter,
+                        child: const Text('Zurücksetzen'),
+                      ),
+                    ),
+                  if (spotsModel.isFiltered) const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton(
+                      onPressed: _isGeocoding ? null : _applyFilter,
+                      child: _isGeocoding
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Filter anwenden'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
