@@ -452,11 +452,11 @@ class _MapScreenState extends State<MapScreen> {
     final lat = spot.position.latitude;
     final lng = spot.position.longitude;
 
-    // Versuche 1: Einfaches geo: Schema (öffnet App-Chooser)
+    // Versuche 1: google.navigation Schema (öffnet App-Chooser mit Navigation)
     try {
-      final geoUri = Uri.parse('geo:$lat,$lng');
+      final navUri = Uri.parse('google.navigation:q=$lat,$lng');
       final launched = await launchUrl(
-        geoUri,
+        navUri,
         mode: LaunchMode.externalApplication,
       );
       if (launched) return;
