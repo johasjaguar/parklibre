@@ -449,35 +449,57 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
 
-    // geo: URI Schema für Android/iOS
-    final uri = Uri.parse(
-      'geo:${spot.position.latitude},${spot.position.longitude}?q=${spot.position.latitude},${spot.position.longitude}(${Uri.encodeComponent(spot.location)})',
-    );
+    final lat = spot.position.latitude;
+    final lng = spot.position.longitude;
 
+    // Versuche 1: Einfaches geo: Schema (öffnet App-Chooser)
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        // Fallback: Google Maps URL
-        final fallbackUri = Uri.parse(
-          'https://www.google.com/maps/dir/?api=1&destination=${spot.position.latitude},${spot.position.longitude}',
-        );
-        if (await canLaunchUrl(fallbackUri)) {
-          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Keine Navigations-App gefunden')),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
-      }
+      final geoUri = Uri.parse('geo:$lat,$lng');
+      final launched = await launchUrl(
+        geoUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    } catch (_) {
+      // Ignoriere Fehler, versuche nächste Option
+    }
+
+    // Versuche 2: Google Maps Intent (android.intent.action.VIEW)
+    try {
+      final mapsUri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+      );
+      final launched = await launchUrl(
+        mapsUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    } catch (_) {
+      // Ignoriere Fehler
+    }
+
+    // Versuche 3: OsmAnd direkt
+    try {
+      final osmandUri = Uri.parse('osmand.api://navigate?lat=$lat&lon=$lng');
+      final launched = await launchUrl(
+        osmandUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    } catch (_) {
+      // Ignoriere Fehler
+    }
+
+    // Fehler anzeigen wenn nichts funktioniert hat
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Keine Navigations-App gefunden. Bitte installiere Organic Maps, OsmAnd oder Google Maps.',
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 }
