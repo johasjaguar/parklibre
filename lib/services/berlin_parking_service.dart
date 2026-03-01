@@ -1,46 +1,43 @@
 import 'dart:convert';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
+import '../models/city_config.dart';
 import '../models/disabled_parking_spot.dart';
+import 'parking_service.dart';
 
-class BerlinParkingService {
-  static const _baseUrl =
-      'https://gdi.berlin.de/services/wfs/behindertenparkplaetze';
-  static const _typeName = 'behindertenparkplaetze:bpark';
-
-  final http.Client _client;
-
+/// Service für Behindertenparkplatz-Daten in Berlin
+/// Verwendet WFS (Web Feature Service) der Berliner Geodateninfrastruktur
+class BerlinParkingService extends ParkingService {
   BerlinParkingService({http.Client? client})
-    : _client = client ?? http.Client();
+    : super(cityConfig: CityConfig.berlin, client: client);
 
+  @override
   Future<List<DisabledParkingSpot>> fetchAllSpots() async {
-    final url = Uri.parse(_baseUrl).replace(
+    final url = Uri.parse(cityConfig.wfsEndpoint).replace(
       queryParameters: {
         'service': 'WFS',
         'version': '2.0.0',
         'request': 'GetFeature',
-        'typeNames': _typeName,
+        'typeNames': cityConfig.layerName,
         'outputFormat': 'application/json',
       },
     );
 
-    final response = await _client.get(url);
+    final response = await client.get(url);
 
     if (response.statusCode != 200) {
-      throw BerlinParkingException(
+      throw ParkingServiceException(
         'Failed to fetch data: ${response.statusCode}',
-        response.body,
+        body: response.body,
+        cityConfig: cityConfig,
       );
     }
 
     final data = json.decode(response.body) as Map<String, dynamic>;
-    final features = data['features'] as List? ?? [];
-
-    return features
-        .map((f) => DisabledParkingSpot.fromJson(f as Map<String, dynamic>))
-        .toList();
+    return parseWfsResponse(data, cityConfig);
   }
 
+  @override
   Future<List<DisabledParkingSpot>> fetchSpotsByDistrict(
     String district,
   ) async {
@@ -48,34 +45,32 @@ class BerlinParkingService {
         '<Filter><PropertyIsEqualTo><PropertyName>bezirk</PropertyName>'
         '<Literal>$district</Literal></PropertyIsEqualTo></Filter>';
 
-    final url = Uri.parse(_baseUrl).replace(
+    final url = Uri.parse(cityConfig.wfsEndpoint).replace(
       queryParameters: {
         'service': 'WFS',
         'version': '2.0.0',
         'request': 'GetFeature',
-        'typeNames': _typeName,
+        'typeNames': cityConfig.layerName,
         'outputFormat': 'application/json',
         'FILTER': filter,
       },
     );
 
-    final response = await _client.get(url);
+    final response = await client.get(url);
 
     if (response.statusCode != 200) {
-      throw BerlinParkingException(
+      throw ParkingServiceException(
         'Failed to fetch data: ${response.statusCode}',
-        response.body,
+        body: response.body,
+        cityConfig: cityConfig,
       );
     }
 
     final data = json.decode(response.body) as Map<String, dynamic>;
-    final features = data['features'] as List? ?? [];
-
-    return features
-        .map((f) => DisabledParkingSpot.fromJson(f as Map<String, dynamic>))
-        .toList();
+    return parseWfsResponse(data, cityConfig);
   }
 
+  @override
   Future<List<DisabledParkingSpot>> fetchSpotsInBounds(
     LatLngBounds bounds,
   ) async {
@@ -83,45 +78,28 @@ class BerlinParkingService {
         '${bounds.southWest.longitude},${bounds.southWest.latitude},'
         '${bounds.northEast.longitude},${bounds.northEast.latitude},EPSG:4326';
 
-    final url = Uri.parse(_baseUrl).replace(
+    final url = Uri.parse(cityConfig.wfsEndpoint).replace(
       queryParameters: {
         'service': 'WFS',
         'version': '2.0.0',
         'request': 'GetFeature',
-        'typeNames': _typeName,
+        'typeNames': cityConfig.layerName,
         'outputFormat': 'application/json',
         'BBOX': bbox,
       },
     );
 
-    final response = await _client.get(url);
+    final response = await client.get(url);
 
     if (response.statusCode != 200) {
-      throw BerlinParkingException(
+      throw ParkingServiceException(
         'Failed to fetch data: ${response.statusCode}',
-        response.body,
+        body: response.body,
+        cityConfig: cityConfig,
       );
     }
 
     final data = json.decode(response.body) as Map<String, dynamic>;
-    final features = data['features'] as List? ?? [];
-
-    return features
-        .map((f) => DisabledParkingSpot.fromJson(f as Map<String, dynamic>))
-        .toList();
+    return parseWfsResponse(data, cityConfig);
   }
-
-  void dispose() {
-    _client.close();
-  }
-}
-
-class BerlinParkingException implements Exception {
-  final String message;
-  final String? body;
-
-  BerlinParkingException(this.message, [this.body]);
-
-  @override
-  String toString() => 'BerlinParkingException: $message';
 }

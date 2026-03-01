@@ -5,12 +5,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide DistanceCalculator;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'models/city_config.dart';
+import 'models/city_model.dart';
 import 'models/disabled_parking_spot.dart';
 import 'models/filter_criteria.dart';
-import 'services/berlin_parking_service.dart';
 import 'services/location_service.dart';
 import 'services/nominatim_service.dart';
+import 'services/parking_service.dart';
 import 'utils/distance_calculator.dart';
 
 void main() {
@@ -24,6 +25,7 @@ class ParkLibreApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => CityModel()),
         ChangeNotifierProvider(create: (_) => ParkingSpotsModel()),
         ChangeNotifierProvider(create: (_) => LocationModel()),
       ],
@@ -95,32 +97,43 @@ class LocationModel extends ChangeNotifier {
 }
 
 class ParkingSpotsModel extends ChangeNotifier {
-  final BerlinParkingService _service = BerlinParkingService();
+  ParkingService? _service;
   List<DisabledParkingSpot> _spots = [];
   List<DisabledParkingSpot> _filteredSpots = [];
   bool _isLoading = false;
   String? _error;
   FilterCriteria? _currentFilter;
-  bool _isFilterActive =
-      false; // NEU: Unterscheidet "kein Filter" von "Filter mit 0 Ergebnissen"
+  bool _isFilterActive = false;
 
   List<DisabledParkingSpot> get spots =>
       _isFilterActive ? _filteredSpots : _spots;
   List<DisabledParkingSpot> get allSpots => _spots;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isFiltered => _isFilterActive; // Geändert: Nutzt _isFilterActive
+  bool get isFiltered => _isFilterActive;
   FilterCriteria? get currentFilter => _currentFilter;
 
+  /// Setzt den Service (wird aufgerufen wenn Stadt gewechselt wird)
+  void setService(ParkingService service) {
+    if (_service != service) {
+      _service?.dispose();
+      _service = service;
+      _spots = [];
+      _filteredSpots = [];
+      _isFilterActive = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadSpots() async {
-    if (_isLoading) return;
+    if (_isLoading || _service == null) return;
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _spots = await _service.fetchAllSpots();
+      _spots = await _service!.fetchAllSpots();
       _filteredSpots = [];
       _isFilterActive = false;
     } catch (e) {
@@ -147,7 +160,7 @@ class ParkingSpotsModel extends ChangeNotifier {
     }
 
     _currentFilter = filter;
-    _isFilterActive = true; // NEU: Filter ist aktiv
+    _isFilterActive = true;
     _filteredSpots = _spots.where((spot) {
       final distance = DistanceCalculator.calculateDistance(
         spot.position,
@@ -161,14 +174,14 @@ class ParkingSpotsModel extends ChangeNotifier {
 
   void clearFilter() {
     _currentFilter = null;
-    _isFilterActive = false; // NEU: Filter deaktiviert
+    _isFilterActive = false;
     _filteredSpots = [];
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _service.dispose();
+    _service?.dispose();
     super.dispose();
   }
 }
@@ -218,12 +231,14 @@ class _MapScreenState extends State<MapScreen> {
     if (locationModel.currentLocation != null) {
       await _animateToLocation(locationModel.currentLocation!);
     } else if (mounted) {
+      final cityModel = context.read<CityModel>();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(locationModel.error ?? 'Standort nicht verfügbar'),
           action: SnackBarAction(
-            label: 'Berlin Mitte',
-            onPressed: () => _animateToLocation(_berlinCenter),
+            label: '${cityModel.currentCityName} Zentrum',
+            onPressed: () =>
+                _animateToLocation(cityModel.currentCity.defaultCenter),
           ),
         ),
       );
@@ -232,198 +247,226 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ParkLibre - Behindertenparkplätze Berlin'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: Consumer2<ParkingSpotsModel, LocationModel>(
-        builder: (context, spotsModel, locationModel, child) {
-          // Zeige Snackbar wenn Filter aktiv aber keine Ergebnisse
-          if (spotsModel.isFiltered &&
-              spotsModel.spots.isEmpty &&
-              spotsModel.currentFilter != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Keine Parkplätze im Umkreis von ${spotsModel.currentFilter!.radiusLabel} gefunden',
-                    ),
-                    action: SnackBarAction(
-                      label: 'Filter zurücksetzen',
-                      onPressed: () => spotsModel.clearFilter(),
-                    ),
+    return Consumer<CityModel>(
+      builder: (context, cityModel, _) {
+        // Update service after build (to avoid setState during build)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final spotsModel = context.read<ParkingSpotsModel>();
+          spotsModel.setService(cityModel.service);
+        });
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('ParkLibre - ${cityModel.currentCityName}'),
+            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          ),
+          body: Consumer2<ParkingSpotsModel, LocationModel>(
+            builder: (context, spotsModel, locationModel, child) {
+              // Zeige Snackbar wenn Filter aktiv aber keine Ergebnisse
+              if (spotsModel.isFiltered &&
+                  spotsModel.spots.isEmpty &&
+                  spotsModel.currentFilter != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Keine Parkplätze im Umkreis von ${spotsModel.currentFilter!.radiusLabel} gefunden',
+                        ),
+                        action: SnackBarAction(
+                          label: 'Filter zurücksetzen',
+                          onPressed: () => spotsModel.clearFilter(),
+                        ),
+                      ),
+                    );
+                  }
+                });
+              }
+
+              // Schließe Snackbar wenn Filter aktiv und Ergebnisse vorhanden
+              if (spotsModel.isFiltered && spotsModel.spots.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  }
+                });
+              }
+
+              if (spotsModel.isLoading && spotsModel.spots.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (spotsModel.error != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Fehler: ${spotsModel.error}'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: spotsModel.loadSpots,
+                        child: const Text('Erneut laden'),
+                      ),
+                    ],
                   ),
                 );
               }
-            });
-          }
 
-          // Schließe Snackbar wenn Filter aktiv und Ergebnisse vorhanden
-          if (spotsModel.isFiltered && spotsModel.spots.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              }
-            });
-          }
-
-          if (spotsModel.isLoading && spotsModel.spots.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (spotsModel.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              return Stack(
                 children: [
-                  Text('Fehler: ${spotsModel.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: spotsModel.loadSpots,
-                    child: const Text('Erneut laden'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Stack(
-            children: [
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _berlinCenter,
-                  initialZoom: _initialZoom,
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                  ),
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'de.parklibre',
-                    maxZoom: 19,
-                  ),
-                  MarkerLayer(
-                    key: ValueKey(
-                      'markers_${spotsModel.isFiltered}_${spotsModel.spots.length}',
-                    ),
-                    markers: spotsModel.spots
-                        .map(
-                          (spot) => Marker(
-                            key: ValueKey(spot.id),
-                            point: spot.position,
-                            width: 40,
-                            height: 40,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () => _showSpotDetails(context, spot),
-                                borderRadius: BorderRadius.circular(20),
-                                child: const Icon(
-                                  Icons.accessible,
-                                  color: Colors.blue,
-                                  size: 32,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  if (locationModel.currentLocation != null)
-                    CircleLayer(
-                      circles: [
-                        CircleMarker(
-                          point: locationModel.currentLocation!,
-                          radius: 12,
-                          color: Colors.blue.withValues(alpha: 0.3),
-                          borderColor: Colors.blue,
-                          borderStrokeWidth: 3,
-                        ),
-                      ],
-                    ),
-                  // Radius-Kreis wenn Filter aktiv
-                  if (spotsModel.isFiltered &&
-                      spotsModel.currentFilter?.center != null)
-                    IgnorePointer(
-                      child: CircleLayer(
-                        circles: [
-                          CircleMarker(
-                            point: spotsModel.currentFilter!.center!,
-                            radius: spotsModel.currentFilter!.radiusMeters,
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderColor: Colors.orange,
-                            borderStrokeWidth: 2,
-                            useRadiusInMeter: true,
-                          ),
-                        ],
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _berlinCenter,
+                      initialZoom: _initialZoom,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                       ),
                     ),
-                ],
-              ),
-              Positioned(
-                bottom: 16,
-                left: 16,
-                child: Chip(
-                  label: Text(
-                    spotsModel.isFiltered
-                        ? (spotsModel.spots.isEmpty
-                              ? 'Keine Parkplätze im Umkreis'
-                              : '${spotsModel.spots.length} Parkplätze im Filter')
-                        : '${spotsModel.spots.length} Parkplätze',
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'de.parklibre',
+                        maxZoom: 19,
+                      ),
+                      MarkerLayer(
+                        key: ValueKey(
+                          'markers_${spotsModel.isFiltered}_${spotsModel.spots.length}',
+                        ),
+                        markers: spotsModel.spots
+                            .map(
+                              (spot) => Marker(
+                                key: ValueKey(spot.id),
+                                point: spot.position,
+                                width: 40,
+                                height: 40,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () =>
+                                        _showSpotDetails(context, spot),
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: const Icon(
+                                      Icons.accessible,
+                                      color: Colors.blue,
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      if (locationModel.currentLocation != null)
+                        CircleLayer(
+                          circles: [
+                            CircleMarker(
+                              point: locationModel.currentLocation!,
+                              radius: 12,
+                              color: Colors.blue.withValues(alpha: 0.3),
+                              borderColor: Colors.blue,
+                              borderStrokeWidth: 3,
+                            ),
+                          ],
+                        ),
+                      // Radius-Kreis wenn Filter aktiv
+                      if (spotsModel.isFiltered &&
+                          spotsModel.currentFilter?.center != null)
+                        IgnorePointer(
+                          child: CircleLayer(
+                            circles: [
+                              CircleMarker(
+                                point: spotsModel.currentFilter!.center!,
+                                radius: spotsModel.currentFilter!.radiusMeters,
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                borderColor: Colors.orange,
+                                borderStrokeWidth: 2,
+                                useRadiusInMeter: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
-                  backgroundColor: spotsModel.isFiltered
-                      ? (spotsModel.spots.isEmpty
-                                ? Colors.orange
-                                : Colors.green)
-                            .withValues(alpha: 0.9)
-                      : Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-              if (locationModel.isLoading)
-                const Positioned(
-                  bottom: 80,
-                  right: 16,
-                  child: CircularProgressIndicator(),
-                ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Filter-Button
-          Consumer<ParkingSpotsModel>(
-            builder: (context, model, _) {
-              return FloatingActionButton(
-                heroTag: 'filter',
-                onPressed: () => _showFilterSheet(context),
-                backgroundColor: model.isFiltered ? Colors.orange : null,
-                child: Icon(
-                  model.isFiltered ? Icons.filter_list_off : Icons.filter_list,
-                ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: Chip(
+                      label: Text(
+                        spotsModel.isFiltered
+                            ? (spotsModel.spots.isEmpty
+                                  ? 'Keine Parkplätze im Umkreis'
+                                  : '${spotsModel.spots.length} Parkplätze im Filter')
+                            : '${spotsModel.spots.length} Parkplätze',
+                      ),
+                      backgroundColor: spotsModel.isFiltered
+                          ? (spotsModel.spots.isEmpty
+                                    ? Colors.orange
+                                    : Colors.green)
+                                .withValues(alpha: 0.9)
+                          : Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  if (locationModel.isLoading)
+                    const Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: CircularProgressIndicator(),
+                    ),
+                ],
               );
             },
           ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'locate',
-            onPressed: _locateMe,
-            child: const Icon(Icons.my_location),
+          floatingActionButton: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // Stadt-Auswahl Button
+              Consumer<CityModel>(
+                builder: (context, cityModel, _) {
+                  return FloatingActionButton.small(
+                    heroTag: 'city',
+                    onPressed: () => _showCitySelector(context),
+                    tooltip: 'Stadt wechseln (${cityModel.currentCityName})',
+                    child: Text(
+                      cityModel.currentCityName.substring(0, 2).toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              // Filter-Button
+              Consumer<ParkingSpotsModel>(
+                builder: (context, model, _) {
+                  return FloatingActionButton(
+                    heroTag: 'filter',
+                    onPressed: () => _showFilterSheet(context),
+                    backgroundColor: model.isFiltered ? Colors.orange : null,
+                    child: Icon(
+                      model.isFiltered
+                          ? Icons.filter_list_off
+                          : Icons.filter_list,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              FloatingActionButton(
+                heroTag: 'locate',
+                onPressed: _locateMe,
+                child: const Icon(Icons.my_location),
+              ),
+              const SizedBox(height: 16),
+              FloatingActionButton(
+                heroTag: 'refresh',
+                onPressed: () => context.read<ParkingSpotsModel>().loadSpots(),
+                child: const Icon(Icons.refresh),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'refresh',
-            onPressed: () => context.read<ParkingSpotsModel>().loadSpots(),
-            child: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -718,6 +761,53 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     _mapController.move(center, zoom);
+  }
+
+  void _showCitySelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Stadt auswählen',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              const Divider(),
+              ...CityConfig.availableCities.map((city) {
+                final isCurrent =
+                    context.watch<CityModel>().currentCityId == city.id;
+                return ListTile(
+                  leading: Icon(
+                    isCurrent ? Icons.check_circle : Icons.location_city,
+                    color: isCurrent ? Colors.green : null,
+                  ),
+                  title: Text(city.name),
+                  subtitle: Text('${city.countryCode} • WFS API'),
+                  onTap: isCurrent
+                      ? null
+                      : () async {
+                          await context.read<CityModel>().switchCity(city);
+                          // Lade neue Daten
+                          context.read<ParkingSpotsModel>().loadSpots();
+                          Navigator.pop(context);
+                        },
+                );
+              }).toList(),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
