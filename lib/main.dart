@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'models/disabled_parking_spot.dart';
 import 'services/berlin_parking_service.dart';
 import 'services/location_service.dart';
@@ -316,46 +318,167 @@ class _MapScreenState extends State<MapScreen> {
   void _showSpotDetails(BuildContext context, DisabledParkingSpot spot) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (context, scrollController) {
+          return SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.accessible, color: Colors.blue, size: 32),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    spot.location,
-                    style: Theme.of(context).textTheme.titleLarge,
+                // Handle für Mobile
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.accessible,
+                        color: Colors.blue,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Behindertenparkplatz',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey[600]),
+                          ),
+                          Text(
+                            spot.location,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Details
+                _DetailCard(
+                  icon: Icons.location_city,
+                  title: 'Bezirk',
+                  value: spot.district,
+                ),
+                if (spot.neighborhood != null)
+                  _DetailCard(
+                    icon: Icons.place,
+                    title: 'Ortsteil',
+                    value: spot.neighborhood!,
+                  ),
+                _DetailCard(
+                  icon: Icons.local_parking,
+                  title: 'Stellplätze',
+                  value:
+                      '${spot.count} ${spot.count == 1 ? 'Platz' : 'Plätze'}',
+                ),
+                if (spot.postalCode != null)
+                  _DetailCard(
+                    icon: Icons.markunread_mailbox,
+                    title: 'PLZ',
+                    value: spot.postalCode!,
+                  ),
+                if (spot.lastUpdated != null)
+                  _DetailCard(
+                    icon: Icons.update,
+                    title: 'Letzte Aktualisierung',
+                    value:
+                        '${spot.lastUpdated!.day}.${spot.lastUpdated!.month}.${spot.lastUpdated!.year}',
+                  ),
+                const SizedBox(height: 24),
+                // Navigation Button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _navigateToSpot(spot),
+                    icon: const Icon(Icons.navigation),
+                    label: const Text('Navigation starten'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            _InfoRow(icon: Icons.location_on, text: spot.district),
-            if (spot.neighborhood != null)
-              _InfoRow(icon: Icons.location_city, text: spot.neighborhood!),
-            _InfoRow(
-              icon: Icons.local_parking,
-              text: '${spot.count} Stellplatz${spot.count > 1 ? 'e' : ''}',
-            ),
-            if (spot.remark != null && spot.remark!.isNotEmpty)
-              _InfoRow(icon: Icons.schedule, text: spot.remark!),
-            if (spot.postalCode != null)
-              _InfoRow(icon: Icons.markunread_mailbox, text: spot.postalCode!),
-            if (spot.lastUpdated != null)
-              _InfoRow(
-                icon: Icons.update,
-                text:
-                    'Aktualisiert: ${spot.lastUpdated!.toLocal().toString().split(' ')[0]}',
-              ),
-          ],
-        ),
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _navigateToSpot(DisabledParkingSpot spot) async {
+    if (Platform.isLinux) {
+      // Linux: Hinweis anzeigen
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Navigation ist auf Linux nicht verfügbar'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    // geo: URI Schema für Android/iOS
+    final uri = Uri.parse(
+      'geo:${spot.position.latitude},${spot.position.longitude}?q=${spot.position.latitude},${spot.position.longitude}(${Uri.encodeComponent(spot.location)})',
+    );
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: Google Maps URL
+        final fallbackUri = Uri.parse(
+          'https://www.google.com/maps/dir/?api=1&destination=${spot.position.latitude},${spot.position.longitude}',
+        );
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Keine Navigations-App gefunden')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+      }
+    }
   }
 }
 
@@ -375,6 +498,55 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(text),
         ],
+      ),
+    );
+  }
+}
+
+class _DetailCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const _DetailCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      color: Colors.grey[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.blue, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
