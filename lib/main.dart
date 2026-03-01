@@ -795,10 +795,15 @@ class _MapScreenState extends State<MapScreen> {
                   onTap: isCurrent
                       ? null
                       : () async {
-                          await context.read<CityModel>().switchCity(city);
+                          // Speichere altes City für später
+                          final newCity = city;
+                          await context.read<CityModel>().switchCity(newCity);
                           // Lade neue Daten
                           context.read<ParkingSpotsModel>().loadSpots();
+                          // Schließe Dialog
                           Navigator.pop(context);
+                          // Zoom auf neue Stadt
+                          _mapController.move(newCity.defaultCenter, 12.0);
                         },
                 );
               }).toList(),
