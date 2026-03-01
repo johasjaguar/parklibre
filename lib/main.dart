@@ -318,17 +318,19 @@ class _MapScreenState extends State<MapScreen> {
                   // Radius-Kreis wenn Filter aktiv
                   if (spotsModel.isFiltered &&
                       spotsModel.currentFilter?.center != null)
-                    CircleLayer(
-                      circles: [
-                        CircleMarker(
-                          point: spotsModel.currentFilter!.center!,
-                          radius: spotsModel.currentFilter!.radiusMeters,
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderColor: Colors.orange,
-                          borderStrokeWidth: 2,
-                          useRadiusInMeter: true,
-                        ),
-                      ],
+                    IgnorePointer(
+                      child: CircleLayer(
+                        circles: [
+                          CircleMarker(
+                            point: spotsModel.currentFilter!.center!,
+                            radius: spotsModel.currentFilter!.radiusMeters,
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderColor: Colors.orange,
+                            borderStrokeWidth: 2,
+                            useRadiusInMeter: true,
+                          ),
+                        ],
+                      ),
                     ),
                 ],
               ),
