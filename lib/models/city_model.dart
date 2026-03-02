@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/city_config.dart';
 import '../services/parking_service.dart';
 import '../services/berlin_parking_service.dart';
 import '../services/munich_parking_service.dart';
+
+/// Gemeinsamer HTTP Client für alle Services
+final _sharedHttpClient = http.Client();
 
 /// Model für die aktuell ausgewählte Stadt
 /// Verwaltet Stadt-Auswahl und Service-Instanz
@@ -31,9 +35,9 @@ class CityModel extends ChangeNotifier {
   ParkingService _createService(CityConfig city) {
     switch (city.id) {
       case 'berlin':
-        return BerlinParkingService();
+        return BerlinParkingService(client: _sharedHttpClient);
       case 'muenchen':
-        return MunichParkingService();
+        return MunichParkingService(client: _sharedHttpClient);
       default:
         throw UnsupportedError('City ${city.id} not supported');
     }

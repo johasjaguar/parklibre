@@ -88,8 +88,20 @@ class DisabledParkingSpot {
 
     LatLng position;
 
-    // Koordinaten aus Geometrie holen und ggf. konvertieren
-    if (geom != null && geom['coordinates'] != null) {
+    // ZUERST: Versuche explizite Koordinatenfelder (gps_lat/gps_lon)
+    final latField = mapping['latitude'];
+    final lonField = mapping['longitude'];
+    if (latField != null &&
+        lonField != null &&
+        props[latField] != null &&
+        props[lonField] != null) {
+      position = LatLng(
+        (props[latField] as num).toDouble(),
+        (props[lonField] as num).toDouble(),
+      );
+    }
+    // FALLBACK: Geometry verwenden wenn keine expliziten Felder
+    else if (geom != null && geom['coordinates'] != null) {
       final coords = geom['coordinates'] as List;
       final x = (coords[0] as num).toDouble();
       final y = (coords[1] as num).toDouble();
@@ -106,21 +118,8 @@ class DisabledParkingSpot {
         position = LatLng(y, x);
       }
     } else {
-      // Fallback: Versuche explizite Koordinatenfelder
-      final latField = mapping['latitude'];
-      final lonField = mapping['longitude'];
-      if (latField != null &&
-          lonField != null &&
-          props[latField] != null &&
-          props[lonField] != null) {
-        position = LatLng(
-          (props[latField] as num).toDouble(),
-          (props[lonField] as num).toDouble(),
-        );
-      } else {
-        // Fallback auf Stadt-Zentrum
-        position = config.defaultCenter;
-      }
+      // Final fallback: Stadt-Zentrum
+      position = config.defaultCenter;
     }
 
     return DisabledParkingSpot(

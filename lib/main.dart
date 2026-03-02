@@ -104,6 +104,7 @@ class ParkingSpotsModel extends ChangeNotifier {
   String? _error;
   FilterCriteria? _currentFilter;
   bool _isFilterActive = false;
+  int _loadCounter = 0; // Force rebuild on change
 
   List<DisabledParkingSpot> get spots =>
       _isFilterActive ? _filteredSpots : _spots;
@@ -112,6 +113,7 @@ class ParkingSpotsModel extends ChangeNotifier {
   String? get error => _error;
   bool get isFiltered => _isFilterActive;
   FilterCriteria? get currentFilter => _currentFilter;
+  int get loadCounter => _loadCounter;
 
   /// Setzt den Service (wird aufgerufen wenn Stadt gewechselt wird)
   void setService(ParkingService service) {
@@ -121,6 +123,7 @@ class ParkingSpotsModel extends ChangeNotifier {
       _spots = [];
       _filteredSpots = [];
       _isFilterActive = false;
+      _loadCounter++;
       notifyListeners();
     }
   }
@@ -136,6 +139,7 @@ class ParkingSpotsModel extends ChangeNotifier {
       _spots = await _service!.fetchAllSpots();
       _filteredSpots = [];
       _isFilterActive = false;
+      _loadCounter++;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -204,7 +208,12 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ParkingSpotsModel>().loadSpots();
+      // Service muss zuerst gesetzt werden
+      final cityModel = context.read<CityModel>();
+      final spotsModel = context.read<ParkingSpotsModel>();
+      spotsModel.setService(cityModel.service);
+      // Dann laden
+      spotsModel.loadSpots();
     });
   }
 
@@ -249,7 +258,8 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Consumer<CityModel>(
       builder: (context, cityModel, _) {
-        // Update service after build (to avoid setState during build)
+        // Always use the current city's service from CityModel
+        // This ensures we always have the right service
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final spotsModel = context.read<ParkingSpotsModel>();
           spotsModel.setService(cityModel.service);
@@ -331,9 +341,7 @@ class _MapScreenState extends State<MapScreen> {
                         maxZoom: 19,
                       ),
                       MarkerLayer(
-                        key: ValueKey(
-                          'markers_${spotsModel.isFiltered}_${spotsModel.spots.length}',
-                        ),
+                        key: ValueKey('markers_${spotsModel.loadCounter}'),
                         markers: spotsModel.spots
                             .map(
                               (spot) => Marker(
@@ -795,12 +803,16 @@ class _MapScreenState extends State<MapScreen> {
                   onTap: isCurrent
                       ? null
                       : () async {
-                          // Speichere altes City für später
                           final newCity = city;
-                          await context.read<CityModel>().switchCity(newCity);
-                          // Lade neue Daten
-                          context.read<ParkingSpotsModel>().loadSpots();
-                          // Schließe Dialog
+                          // Erst Service wechseln
+                          final cityModel = context.read<CityModel>();
+                          await cityModel.switchCity(newCity);
+                          // Service im ParkingSpotsModel aktualisieren
+                          final spotsModel = context.read<ParkingSpotsModel>();
+                          spotsModel.setService(cityModel.service);
+                          // Dann Daten laden
+                          spotsModel.loadSpots();
+                          // Dialog schließen
                           Navigator.pop(context);
                           // Zoom auf neue Stadt
                           _mapController.move(newCity.defaultCenter, 12.0);

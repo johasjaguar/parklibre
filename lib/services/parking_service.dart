@@ -8,9 +8,11 @@ import '../models/disabled_parking_spot.dart';
 abstract class ParkingService {
   final CityConfig cityConfig;
   final http.Client client;
+  final bool _closeClientOnDispose;
 
   ParkingService({required this.cityConfig, http.Client? client})
-    : client = client ?? http.Client();
+    : client = client ?? http.Client(),
+      _closeClientOnDispose = client == null;
 
   /// Lädt alle Parkplätze für die konfigurierte Stadt
   Future<List<DisabledParkingSpot>> fetchAllSpots();
@@ -21,9 +23,11 @@ abstract class ParkingService {
   /// Lädt Parkplätze innerhalb einer Bounding Box
   Future<List<DisabledParkingSpot>> fetchSpotsInBounds(LatLngBounds bounds);
 
-  /// Disposed den HTTP Client
+  /// Disposed den HTTP Client nur wenn er intern erstellt wurde
   void dispose() {
-    client.close();
+    if (_closeClientOnDispose) {
+      client.close();
+    }
   }
 
   /// Hilfsmethode zum Parsen der WFS Response
