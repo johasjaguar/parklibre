@@ -2,6 +2,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:proj4dart/proj4dart.dart' as proj4;
 import 'city_config.dart';
 
+/// Status ob Adresse verfügbar ist oder Reverse Geocoding braucht
+enum AddressSource {
+  hasAddress, // API liefert echte Adresse
+  needsReverse, // Muss via Reverse Geocoding geladen werden
+}
+
 /// Koordinaten-Transformation von UTM zu WGS84
 final _utmProj =
     proj4.Projection.get('EPSG:25832') ??
@@ -26,6 +32,7 @@ class DisabledParkingSpot {
   final LatLng position;
   final DateTime? lastUpdated;
   final String cityId;
+  final AddressSource addressSource;
 
   const DisabledParkingSpot({
     required this.id,
@@ -40,6 +47,7 @@ class DisabledParkingSpot {
     required this.position,
     this.lastUpdated,
     required this.cityId,
+    this.addressSource = AddressSource.hasAddress,
   });
 
   factory DisabledParkingSpot.fromJson(Map<String, dynamic> json) {
@@ -74,6 +82,7 @@ class DisabledParkingSpot {
           ? DateTime.tryParse(props['datum'].toString())
           : null,
       cityId: 'berlin',
+      addressSource: AddressSource.hasAddress,
     );
   }
 
@@ -122,6 +131,15 @@ class DisabledParkingSpot {
       position = config.defaultCenter;
     }
 
+    // Bestimme addressSource: Wenn API ein location-Feld hat → hasAddress, sonst needsReverse
+    final hasLocationField =
+        mapping['location'] != null &&
+        props[mapping['location']] != null &&
+        props[mapping['location']].toString().isNotEmpty;
+    final addressSource = hasLocationField
+        ? AddressSource.hasAddress
+        : AddressSource.needsReverse;
+
     return DisabledParkingSpot(
       id: props[mapping['id']]?.toString() ?? '',
       district: props[mapping['district']]?.toString() ?? '',
@@ -133,7 +151,9 @@ class DisabledParkingSpot {
       policeSection: mapping['policeSection'] != null
           ? props[mapping['policeSection']]?.toString()
           : null,
-      location: props[mapping['location']]?.toString() ?? '',
+      location: hasLocationField
+          ? props[mapping['location']].toString()
+          : '${config.cityNameInAddress} (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})',
       postalCode: mapping['postalCode'] != null
           ? props[mapping['postalCode']]?.toString()
           : null,
@@ -147,6 +167,7 @@ class DisabledParkingSpot {
           ? DateTime.tryParse(props[mapping['lastUpdated']].toString())
           : null,
       cityId: config.id,
+      addressSource: addressSource,
     );
   }
 

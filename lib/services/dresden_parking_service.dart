@@ -143,6 +143,7 @@ class DresdenParkingService extends ParkingService {
         position: position,
         lastUpdated: lastUpdated,
         cityId: cityConfig.id,
+        addressSource: AddressSource.needsReverse,
       );
     }).toList();
   }

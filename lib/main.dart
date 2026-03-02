@@ -566,14 +566,62 @@ class _MapScreenState extends State<MapScreen> {
                                     ?.copyWith(color: Colors.grey[600]),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                spot.location,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 18,
-                                    ),
-                              ),
+                              // Für Dresden: Reverse Geocoding wenn nötig
+                              if (spot.addressSource ==
+                                  AddressSource.needsReverse)
+                                FutureBuilder<String?>(
+                                  future: () async {
+                                    final nom = NominatimService();
+                                    final addr = await nom.reverseGeocode(
+                                      spot.position,
+                                    );
+                                    nom.dispose();
+                                    return addr;
+                                  }(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 12,
+                                            height: 12,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Adresse wird geladen...',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                    return Text(
+                                      snapshot.data ?? spot.location,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 18,
+                                          ),
+                                    );
+                                  },
+                                )
+                              else
+                                Text(
+                                  spot.location,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18,
+                                      ),
+                                ),
                               if (spot.postalCode != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
