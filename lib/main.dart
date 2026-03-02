@@ -647,10 +647,13 @@ class _MapScreenState extends State<MapScreen> {
 
                                     String? plz;
                                     String? city;
+                                    String? districtFromGeocode;
 
                                     if (parts.length >= 5) {
                                       city = parts[parts.length - 4];
                                       plz = parts[parts.length - 2];
+                                      districtFromGeocode =
+                                          parts[parts.length - 5];
                                     }
 
                                     return Column(
@@ -678,6 +681,24 @@ class _MapScreenState extends State<MapScreen> {
                                             child: Text(
                                               '${plz ?? ''} ${city ?? ''}'
                                                   .trim(),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 14,
+                                                  ),
+                                            ),
+                                          ),
+                                        if (spot.district.isEmpty &&
+                                            districtFromGeocode != null &&
+                                            districtFromGeocode!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              districtFromGeocode!,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
