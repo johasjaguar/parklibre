@@ -583,7 +583,7 @@ class _MapScreenState extends State<MapScreen> {
                                         ConnectionState.waiting) {
                                       return Row(
                                         children: [
-                                          SizedBox(
+                                          const SizedBox(
                                             width: 12,
                                             height: 12,
                                             child: CircularProgressIndicator(
@@ -601,15 +601,88 @@ class _MapScreenState extends State<MapScreen> {
                                         ],
                                       );
                                     }
-                                    return Text(
-                                      snapshot.data ?? spot.location,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 18,
+
+                                    final fullAddr = snapshot.data;
+                                    if (fullAddr == null) {
+                                      return Text(
+                                        spot.location,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 18,
+                                            ),
+                                      );
+                                    }
+
+                                    final parts = fullAddr.split(', ');
+                                    String? poi;
+                                    String? street;
+                                    String? houseNumber;
+
+                                    if (parts.isNotEmpty &&
+                                        parts[0].isNotEmpty) {
+                                      final first = parts[0];
+                                      final second = parts.length > 1
+                                          ? parts[1]
+                                          : '';
+                                      final third = parts.length > 2
+                                          ? parts[2]
+                                          : '';
+
+                                      if (int.tryParse(first) != null) {
+                                        houseNumber = first;
+                                        street = second;
+                                      } else if (int.tryParse(second) != null) {
+                                        poi = first;
+                                        houseNumber = second;
+                                        street = third;
+                                      } else {
+                                        street = parts.length > 1
+                                            ? '$first $second'.trim()
+                                            : first;
+                                      }
+                                    }
+
+                                    String? plz;
+                                    String? city;
+
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          houseNumber != null || poi != null
+                                              ? '${poi ?? ''} ${street ?? ''} ${houseNumber ?? ''}'
+                                                    .trim()
+                                              : (street ?? ''),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 18,
+                                              ),
+                                        ),
+                                        if (plz != null || city != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              '${plz ?? ''} ${city ?? ''}'
+                                                  .trim(),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 14,
+                                                  ),
+                                            ),
                                           ),
+                                      ],
                                     );
                                   },
                                 )
