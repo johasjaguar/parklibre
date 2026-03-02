@@ -601,15 +601,77 @@ class _MapScreenState extends State<MapScreen> {
                                         ],
                                       );
                                     }
-                                    return Text(
-                                      snapshot.data ?? spot.location,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 18,
+                                    // Parse Nominatim response: "Straße Nr., PLZ Ort, Land"
+                                    final fullAddr = snapshot.data;
+                                    if (fullAddr == null) {
+                                      return Text(
+                                        spot.location,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 18,
+                                            ),
+                                      );
+                                    }
+                                    final parts = fullAddr.split(', ');
+                                    final street = parts.isNotEmpty
+                                        ? parts[0]
+                                        : fullAddr;
+                                    // Suche PLZ (5 Ziffern) und Ort
+                                    String? plz;
+                                    String? city;
+                                    for (final part in parts) {
+                                      final plzMatch = RegExp(
+                                        r'^\d{5}$',
+                                      ).firstMatch(part);
+                                      if (plzMatch != null) {
+                                        plz = plzMatch.group(0);
+                                      } else if (RegExp(
+                                        r'^\d{5} \D+$',
+                                      ).hasMatch(part)) {
+                                        final idx = part.indexOf(' ');
+                                        plz = part.substring(0, 5);
+                                        city = part.substring(idx + 1);
+                                      }
+                                    }
+                                    // Wenn kein PLZ-Ort-Part gefunden, nimm den 2. oder 3. Part
+                                    if (city == null && parts.length >= 3) {
+                                      city = parts[1].trim();
+                                    }
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          street,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 18,
+                                              ),
+                                        ),
+                                        if (plz != null || city != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              '${plz ?? ''} ${city ?? ''}'
+                                                  .trim(),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 14,
+                                                  ),
+                                            ),
                                           ),
+                                      ],
                                     );
                                   },
                                 )
