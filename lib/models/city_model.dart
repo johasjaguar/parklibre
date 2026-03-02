@@ -5,6 +5,7 @@ import '../models/city_config.dart';
 import '../services/parking_service.dart';
 import '../services/berlin_parking_service.dart';
 import '../services/munich_parking_service.dart';
+import '../services/dresden_parking_service.dart';
 
 /// Gemeinsamer HTTP Client für alle Services
 final _sharedHttpClient = http.Client();
@@ -38,22 +39,27 @@ class CityModel extends ChangeNotifier {
         return BerlinParkingService(client: _sharedHttpClient);
       case 'muenchen':
         return MunichParkingService(client: _sharedHttpClient);
+      case 'dresden':
+        return DresdenParkingService(client: _sharedHttpClient);
       default:
         throw UnsupportedError('City ${city.id} not supported');
     }
   }
 
   /// Lädt die zuletzt ausgewählte Stadt aus SharedPreferences
+  /// Wenn keine Stadt gespeichert ist, bleibt Berlin als Standard
   Future<void> _loadSavedCity() async {
     final prefs = await SharedPreferences.getInstance();
     final savedCityId = prefs.getString(_cityKey);
 
-    if (savedCityId != null) {
+    // Nur laden wenn eine gültige Stadt gespeichert wurde
+    if (savedCityId != null && savedCityId.isNotEmpty) {
       final city = CityConfig.findById(savedCityId);
       if (city != null && city.id != _currentCity.id) {
         _switchCity(city);
       }
     }
+    // Wenn keine Stadt gespeichert, bleibt Berlin als Standard (wie gewünscht)
   }
 
   /// Wechselt zu einer anderen Stadt

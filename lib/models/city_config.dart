@@ -6,32 +6,40 @@ enum CoordinateSystem {
   utm32, // EPSG:25832 - UTM Zone 32 (München)
 }
 
+/// API-Typ der Stadt
+enum ApiType {
+  wfs, // Web Feature Service (Berlin, München)
+  ogcApi, // OGC API Features (Dresden)
+}
+
 /// Konfiguration für eine Stadt mit Behindertenparkplatz-Daten
 class CityConfig {
   final String id;
   final String name;
   final String countryCode;
   final LatLng defaultCenter;
-  final String wfsEndpoint;
-  final String layerName;
+  final String apiEndpoint; // WFS oder OGC API Endpoint
+  final String? layerName; // Nur für WFS
   final String cityNameInAddress;
   final Map<String, String?> fieldMapping;
   final CoordinateSystem coordinateSystem;
+  final ApiType apiType;
 
   const CityConfig({
     required this.id,
     required this.name,
     required this.countryCode,
     required this.defaultCenter,
-    required this.wfsEndpoint,
-    required this.layerName,
+    required this.apiEndpoint,
+    this.layerName,
     required this.cityNameInAddress,
     required this.fieldMapping,
     this.coordinateSystem = CoordinateSystem.wgs84,
+    this.apiType = ApiType.wfs,
   });
 
   /// Verfügbare Städte
-  static const List<CityConfig> availableCities = [berlin, muenchen];
+  static const List<CityConfig> availableCities = [berlin, muenchen, dresden];
 
   /// Berlin Konfiguration
   static const CityConfig berlin = CityConfig(
@@ -39,10 +47,11 @@ class CityConfig {
     name: 'Berlin',
     countryCode: 'DE',
     defaultCenter: LatLng(52.52, 13.405),
-    wfsEndpoint: 'https://gdi.berlin.de/services/wfs/behindertenparkplaetze',
+    apiEndpoint: 'https://gdi.berlin.de/services/wfs/behindertenparkplaetze',
     layerName: 'behindertenparkplaetze:bpark',
     cityNameInAddress: 'Berlin',
     coordinateSystem: CoordinateSystem.wgs84,
+    apiType: ApiType.wfs,
     fieldMapping: {
       'id': 'uid',
       'district': 'bezirk',
@@ -65,10 +74,11 @@ class CityConfig {
     name: 'München',
     countryCode: 'DE',
     defaultCenter: LatLng(48.1351, 11.5820),
-    wfsEndpoint: 'https://geoportal.muenchen.de/geoserver/mor_wfs/ows',
+    apiEndpoint: 'https://geoportal.muenchen.de/geoserver/mor_wfs/ows',
     layerName: 'mor_wfs:behindertenparkplaetze',
     cityNameInAddress: 'München',
     coordinateSystem: CoordinateSystem.utm32,
+    apiType: ApiType.wfs,
     fieldMapping: {
       'id': 'parkplatz_id',
       'district': 'stadtbezirk',
@@ -82,6 +92,33 @@ class CityConfig {
       'latitude': null,
       'longitude': null,
       'lastUpdated': 'erfasst_bearbeitet',
+    },
+  );
+
+  /// Dresden Konfiguration (OGC API!)
+  static const CityConfig dresden = CityConfig(
+    id: 'dresden',
+    name: 'Dresden',
+    countryCode: 'DE',
+    defaultCenter: LatLng(51.0504, 13.7373),
+    apiEndpoint:
+        'https://kommisdd.dresden.de/net4/public/ogcapi/collections/L1113/items',
+    cityNameInAddress: 'Dresden',
+    coordinateSystem: CoordinateSystem.wgs84,
+    apiType: ApiType.ogcApi,
+    fieldMapping: {
+      'id': 'id',
+      'district': null,
+      'designation': 'nutzungszeit',
+      'remark': 'bewertung_ohne_seitenabstand_txt',
+      'count': 'stellplatzanzahl',
+      'policeSection': null,
+      'location': null,
+      'postalCode': null,
+      'neighborhood': null,
+      'latitude': null,
+      'longitude': null,
+      'lastUpdated': 'kks_mdd',
     },
   );
 

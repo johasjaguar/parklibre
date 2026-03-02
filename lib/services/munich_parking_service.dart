@@ -13,7 +13,7 @@ class MunichParkingService extends ParkingService {
 
   @override
   Future<List<DisabledParkingSpot>> fetchAllSpots() async {
-    final url = Uri.parse(cityConfig.wfsEndpoint).replace(
+    final url = Uri.parse(cityConfig.apiEndpoint).replace(
       queryParameters: {
         'service': 'WFS',
         'version': '2.0.0',
@@ -46,7 +46,7 @@ class MunichParkingService extends ParkingService {
         '<Filter><PropertyIsEqualTo><PropertyName>stadtbezirk</PropertyName>'
         '<Literal>$district</Literal></PropertyIsEqualTo></Filter>';
 
-    final url = Uri.parse(cityConfig.wfsEndpoint).replace(
+    final url = Uri.parse(cityConfig.apiEndpoint).replace(
       queryParameters: {
         'service': 'WFS',
         'version': '2.0.0',
@@ -79,7 +79,7 @@ class MunichParkingService extends ParkingService {
         '${bounds.southWest.longitude},${bounds.southWest.latitude},'
         '${bounds.northEast.longitude},${bounds.northEast.latitude},EPSG:4326';
 
-    final url = Uri.parse(cityConfig.wfsEndpoint).replace(
+    final url = Uri.parse(cityConfig.apiEndpoint).replace(
       queryParameters: {
         'service': 'WFS',
         'version': '2.0.0',

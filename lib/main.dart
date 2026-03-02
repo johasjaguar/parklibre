@@ -214,6 +214,8 @@ class _MapScreenState extends State<MapScreen> {
       spotsModel.setService(cityModel.service);
       // Dann laden
       spotsModel.loadSpots();
+      // Karte auf Stadtzentrum zentrieren
+      _mapController.move(cityModel.currentCity.defaultCenter, _initialZoom);
     });
   }
 
@@ -327,7 +329,10 @@ class _MapScreenState extends State<MapScreen> {
                   FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _berlinCenter,
+                      initialCenter: context
+                          .read<CityModel>()
+                          .currentCity
+                          .defaultCenter,
                       initialZoom: _initialZoom,
                       interactionOptions: const InteractionOptions(
                         flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
@@ -343,17 +348,21 @@ class _MapScreenState extends State<MapScreen> {
                       MarkerLayer(
                         key: ValueKey('markers_${spotsModel.loadCounter}'),
                         markers: spotsModel.spots
+                            .asMap()
+                            .entries
                             .map(
-                              (spot) => Marker(
-                                key: ValueKey(spot.id),
-                                point: spot.position,
+                              (entry) => Marker(
+                                key: ValueKey(
+                                  '${entry.value.cityId}_${entry.value.id}_${entry.key}',
+                                ),
+                                point: entry.value.position,
                                 width: 40,
                                 height: 40,
                                 child: Material(
                                   color: Colors.transparent,
                                   child: InkWell(
                                     onTap: () =>
-                                        _showSpotDetails(context, spot),
+                                        _showSpotDetails(context, entry.value),
                                     borderRadius: BorderRadius.circular(20),
                                     child: const Icon(
                                       Icons.accessible,

@@ -7,25 +7,30 @@ import 'package:latlong2/latlong.dart';
 class NominatimService {
   static const _baseUrl = 'https://nominatim.openstreetmap.org';
   static const _userAgent = 'ParkLibre/1.0 (F-Droid)';
+  static const _defaultCity = 'Berlin, Deutschland';
 
   final http.Client _client;
 
   NominatimService({http.Client? client}) : _client = client ?? http.Client();
 
   /// Sucht Adressen mit Autocomplete (fuzzy search)
+  /// [cityName] z.B. "Berlin, Deutschland" oder "München, Deutschland"
   /// Rate-Limit: 1 Request pro Sekunde
   Future<List<Map<String, dynamic>>> searchAddresses(
     String query, {
     int limit = 5,
+    String? cityName,
   }) async {
     if (query.trim().isEmpty || query.length < 3) {
       return [];
     }
 
+    final city = cityName ?? _defaultCity;
+
     try {
       final uri = Uri.parse('$_baseUrl/search').replace(
         queryParameters: {
-          'q': '$query, Berlin, Deutschland',
+          'q': '$query, $city',
           'format': 'json',
           'limit': limit.toString(),
           'addressdetails': '1',
@@ -53,16 +58,19 @@ class NominatimService {
   }
 
   /// Geocodiert eine Adresse zu Koordinaten
+  /// [cityName] z.B. "Berlin, Deutschland" oder "München, Deutschland"
   /// Rate-Limit: 1 Request pro Sekunde
-  Future<LatLng?> geocodeAddress(String address) async {
+  Future<LatLng?> geocodeAddress(String address, {String? cityName}) async {
     if (address.trim().isEmpty) {
       return null;
     }
 
+    final city = cityName ?? _defaultCity;
+
     try {
       final uri = Uri.parse('$_baseUrl/search').replace(
         queryParameters: {
-          'q': '$address, Berlin, Deutschland',
+          'q': '$address, $city',
           'format': 'json',
           'limit': '1',
           'addressdetails': '0',
