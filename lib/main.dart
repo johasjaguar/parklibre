@@ -647,13 +647,10 @@ class _MapScreenState extends State<MapScreen> {
 
                                     String? plz;
                                     String? city;
-                                    String? districtFromGeocode;
 
                                     if (parts.length >= 5) {
                                       city = parts[parts.length - 4];
                                       plz = parts[parts.length - 2];
-                                      districtFromGeocode =
-                                          parts[parts.length - 5];
                                     }
 
                                     return Column(
@@ -681,24 +678,6 @@ class _MapScreenState extends State<MapScreen> {
                                             child: Text(
                                               '${plz ?? ''} ${city ?? ''}'
                                                   .trim(),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.copyWith(
-                                                    color: Colors.grey[600],
-                                                    fontSize: 14,
-                                                  ),
-                                            ),
-                                          ),
-                                        if (spot.district.isEmpty &&
-                                            districtFromGeocode != null &&
-                                            districtFromGeocode!.isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 4,
-                                            ),
-                                            child: Text(
-                                              districtFromGeocode!,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
@@ -756,11 +735,46 @@ class _MapScreenState extends State<MapScreen> {
                           title: distanceTitle,
                           value: distanceText,
                         ),
-                      _DetailCard(
-                        icon: Icons.location_city,
-                        title: 'Bezirk',
-                        value: spot.district,
-                      ),
+                      if (spot.addressSource == AddressSource.needsReverse)
+                        FutureBuilder<String?>(
+                          future: () async {
+                            final nom = NominatimService();
+                            final addr = await nom.reverseGeocode(
+                              spot.position,
+                            );
+                            nom.dispose();
+                            return addr;
+                          }(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const _DetailCard(
+                                icon: Icons.location_city,
+                                title: 'Bezirk',
+                                value: '...',
+                              );
+                            }
+                            final fullAddr = snapshot.data;
+                            String districtValue = spot.district;
+                            if (fullAddr != null) {
+                              final parts = fullAddr.split(', ');
+                              if (parts.length >= 5) {
+                                districtValue = parts[parts.length - 5];
+                              }
+                            }
+                            return _DetailCard(
+                              icon: Icons.location_city,
+                              title: 'Bezirk',
+                              value: districtValue,
+                            );
+                          },
+                        )
+                      else
+                        _DetailCard(
+                          icon: Icons.location_city,
+                          title: 'Bezirk',
+                          value: spot.district,
+                        ),
                       if (spot.neighborhood != null)
                         _DetailCard(
                           icon: Icons.place,
