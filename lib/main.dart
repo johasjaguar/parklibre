@@ -648,6 +648,11 @@ class _MapScreenState extends State<MapScreen> {
                                     String? plz;
                                     String? city;
 
+                                    if (parts.length >= 5) {
+                                      city = parts[parts.length - 4];
+                                      plz = parts[parts.length - 2];
+                                    }
+
                                     return Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -699,7 +704,7 @@ class _MapScreenState extends State<MapScreen> {
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    '${spot.postalCode} Berlin',
+                                    '${spot.postalCode} ${CityConfig.findById(spot.cityId)?.name ?? ''}',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
