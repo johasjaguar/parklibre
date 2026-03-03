@@ -1190,32 +1190,28 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
     // Prüfe ob Stadt implementiert ist
     if (detectedCityId == null) {
-      // Stadt nicht erkannt - prüfe ob in Deutschland
-      final address = suggestion['address'] as Map<String, dynamic>?;
-      final country = address?['country'] as String? ?? '';
-      if (country.toLowerCase().contains('deutschland')) {
-        setState(() {
-          _showSuggestions = false;
-          _errorMessage =
-              'Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden.';
-        });
-        return;
-      }
-    } else {
-      // Stadt erkannt - prüfe ob implementiert
-      final targetCity = CityConfig.findById(detectedCityId);
-      if (targetCity == null) {
-        setState(() {
-          _showSuggestions = false;
-          _errorMessage =
-              'Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden.';
-        });
-        return;
-      }
+      // Stadt nicht in Berlin/München/Dresden - zeige Fehlermeldung
+      setState(() {
+        _showSuggestions = false;
+        _errorMessage =
+            'Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden.';
+      });
+      return;
+    }
+
+    // Stadt erkannt - prüfe ob implementiert
+    final targetCity = CityConfig.findById(detectedCityId);
+    if (targetCity == null) {
+      setState(() {
+        _showSuggestions = false;
+        _errorMessage =
+            'Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden.';
+      });
+      return;
     }
 
     // Wechsle Stadt wenn nötig
-    if (detectedCityId != null && detectedCityId != currentCityId) {
+    if (detectedCityId != currentCityId) {
       final targetCity = CityConfig.findById(detectedCityId);
       if (targetCity != null) {
         final cityModel = context.read<CityModel>();
