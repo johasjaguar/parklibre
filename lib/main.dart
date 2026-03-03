@@ -1192,7 +1192,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     if (detectedCityId != null && detectedCityId != currentCityId) {
       final targetCity = CityConfig.findById(detectedCityId);
       if (targetCity != null) {
-        await context.read<CityModel>().switchCity(targetCity);
+        final cityModel = context.read<CityModel>();
+        await cityModel.switchCity(targetCity);
+        // Parkplätze für neue Stadt laden
+        final spotsModel = context.read<ParkingSpotsModel>();
+        spotsModel.setService(cityModel.service);
+        spotsModel.loadSpots();
       }
     }
 
