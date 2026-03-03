@@ -1135,8 +1135,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     setState(() => _isSearching = true);
 
     try {
+      final cityName = context.read<CityModel>().currentCity.name;
       final service = NominatimService();
-      final results = await service.searchAddresses(query, limit: 5);
+      final results = await service.searchAddresses(
+        query,
+        limit: 5,
+        cityName: '$cityName, Deutschland',
+      );
       service.dispose();
 
       if (mounted) {
