@@ -1188,6 +1188,32 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     final detectedCityId = _detectCityIdFromAddress(suggestion);
     final currentCityId = context.read<CityModel>().currentCityId;
 
+    // Prüfe ob Stadt implementiert ist
+    if (detectedCityId == null) {
+      // Stadt nicht erkannt - prüfe ob in Deutschland
+      final address = suggestion['address'] as Map<String, dynamic>?;
+      final country = address?['country'] as String? ?? '';
+      if (country.toLowerCase().contains('deutschland')) {
+        setState(() {
+          _showSuggestions = false;
+          _errorMessage =
+              'Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden.';
+        });
+        return;
+      }
+    } else {
+      // Stadt erkannt - prüfe ob implementiert
+      final targetCity = CityConfig.findById(detectedCityId);
+      if (targetCity == null) {
+        setState(() {
+          _showSuggestions = false;
+          _errorMessage =
+              'Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden.';
+        });
+        return;
+      }
+    }
+
     // Wechsle Stadt wenn nötig
     if (detectedCityId != null && detectedCityId != currentCityId) {
       final targetCity = CityConfig.findById(detectedCityId);
