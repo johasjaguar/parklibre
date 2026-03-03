@@ -1630,8 +1630,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   Expanded(
                     flex: 2,
                     child: FilledButton(
-                      onPressed: _isGeocoding ? null : _applyFilter,
-                      child: _isGeocoding
+                      onPressed: (_isGeocoding || spotsModel.isLoading)
+                          ? null
+                          : _applyFilter,
+                      child: _isGeocoding || spotsModel.isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
