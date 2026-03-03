@@ -1284,8 +1284,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       });
 
       try {
+        final cityName = context.read<CityModel>().currentCity.name;
         final service = NominatimService();
-        center = await service.geocodeAddress(_addressController.text.trim());
+        center = await service.geocodeAddress(
+          _addressController.text.trim(),
+          cityName: '$cityName, Deutschland',
+        );
         service.dispose();
 
         if (center == null) {
