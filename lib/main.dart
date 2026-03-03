@@ -1176,7 +1176,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     // Geocode the selected address
     try {
       final service = NominatimService();
-      final center = await service.geocodeAddress(normalizedAddress);
+      final center = await service.geocodeAddress(
+        normalizedAddress,
+        cityName: '$cityName, Deutschland',
+      );
       service.dispose();
 
       if (center != null && mounted) {
