@@ -1290,6 +1290,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   }
 
   Future<void> _applyFilter() async {
+    // Alte Snackbar schließen bevor neue Filterung startet
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
     LatLng? center;
     String? address;
 
