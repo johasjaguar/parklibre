@@ -1388,6 +1388,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
+                        : _addressController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _addressController.clear();
+                              setState(() {
+                                _suggestions = [];
+                                _showSuggestions = false;
+                              });
+                            },
+                          )
                         : null,
                     errorText: _errorMessage,
                   ),
