@@ -39,6 +39,7 @@ dependencies:
   url_launcher: ^6.3.0
   shared_preferences: ^2.5.0
   cupertino_icons: ^1.0.8
+  proj4dart: ^2.1.0
 
 dev_dependencies:
   flutter_test:
