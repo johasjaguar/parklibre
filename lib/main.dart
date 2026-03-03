@@ -1162,8 +1162,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   }
 
   Future<void> _selectSuggestion(Map<String, dynamic> suggestion) async {
+    final cityName = context.read<CityModel>().currentCity.name;
+
     // Adresse normalisieren
-    final normalizedAddress = _normalizeAddress(suggestion);
+    final normalizedAddress = _normalizeAddress(suggestion, cityName);
     _addressController.text = normalizedAddress;
 
     setState(() {
@@ -1190,7 +1192,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     }
   }
 
-  String _normalizeAddress(Map<String, dynamic> suggestion) {
+  String _normalizeAddress(Map<String, dynamic> suggestion, String cityName) {
     final address = suggestion['address'] as Map<String, dynamic>?;
 
     if (address == null) {
@@ -1217,7 +1219,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         address['town'] as String? ??
         address['village'] as String? ??
         address['suburb'] as String? ??
-        'Berlin';
+        cityName;
 
     // Format: "Straße Hausnummer, PLZ Ort"
     final streetPart = houseNumber.isNotEmpty ? '$road $houseNumber' : road;
