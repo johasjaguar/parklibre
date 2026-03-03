@@ -207,9 +207,11 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Service muss zuerst gesetzt werden
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Warten bis Stadt geladen ist (wichtig für geladene Stadt aus SharedPreferences)
       final cityModel = context.read<CityModel>();
+      await cityModel.waitForInitialization();
+
       final spotsModel = context.read<ParkingSpotsModel>();
       spotsModel.setService(cityModel.service);
       // Dann laden

@@ -17,6 +17,7 @@ class CityModel extends ChangeNotifier {
 
   CityConfig _currentCity = CityConfig.berlin;
   ParkingService? _service;
+  Future<void>? _initializationComplete;
 
   CityConfig get currentCity => _currentCity;
   ParkingService get service {
@@ -27,9 +28,13 @@ class CityModel extends ChangeNotifier {
   String get currentCityName => _currentCity.name;
   String get currentCityId => _currentCity.id;
 
+  Future<void> waitForInitialization() async {
+    await _initializationComplete;
+  }
+
   CityModel() {
     _service = _createService(_currentCity);
-    _loadSavedCity();
+    _initializationComplete = _loadSavedCity();
   }
 
   /// Erstellt den passenden Service für eine Stadt
