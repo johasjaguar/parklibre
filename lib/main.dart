@@ -1135,12 +1135,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     setState(() => _isSearching = true);
 
     try {
-      final cityName = context.read<CityModel>().currentCity.name;
       final service = NominatimService();
+      // Suche in ganz Deutschland, nicht nur in aktueller Stadt
       final results = await service.searchAddresses(
         query,
-        limit: 5,
-        cityName: '$cityName, Deutschland',
+        limit: 10,
+        cityName: 'Deutschland',
       );
       service.dispose();
 
@@ -1161,7 +1161,41 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     }
   }
 
+  String? _detectCityIdFromAddress(Map<String, dynamic> suggestion) {
+    final address = suggestion['address'] as Map<String, dynamic>?;
+    if (address == null) return null;
+
+    // Verschiedene Städte erkennen
+    final city =
+        address['city'] as String? ??
+        address['town'] as String? ??
+        address['village'] as String? ??
+        address['municipality'] as String?;
+
+    if (city == null) return null;
+
+    final cityLower = city.toLowerCase();
+    if (cityLower.contains('berlin')) return 'berlin';
+    if (cityLower.contains('münchen') || cityLower.contains('munich'))
+      return 'muenchen';
+    if (cityLower.contains('dresden')) return 'dresden';
+
+    return null;
+  }
+
   Future<void> _selectSuggestion(Map<String, dynamic> suggestion) async {
+    // Erkenne Stadt aus der Adresse
+    final detectedCityId = _detectCityIdFromAddress(suggestion);
+    final currentCityId = context.read<CityModel>().currentCityId;
+
+    // Wechsle Stadt wenn nötig
+    if (detectedCityId != null && detectedCityId != currentCityId) {
+      final targetCity = CityConfig.findById(detectedCityId);
+      if (targetCity != null) {
+        await context.read<CityModel>().switchCity(targetCity);
+      }
+    }
+
     final cityName = context.read<CityModel>().currentCity.name;
 
     // Adresse normalisieren
