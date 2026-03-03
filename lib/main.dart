@@ -1122,8 +1122,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       setState(() {
         _suggestions = [];
         _showSuggestions = false;
+        _errorMessage = null; // Fehlermeldung löschen bei neuer Suche
       });
       return;
+    }
+
+    // Fehlermeldung löschen bei neuer Suche
+    if (_errorMessage != null) {
+      setState(() {
+        _errorMessage = null;
+      });
     }
 
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -1655,7 +1663,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   Expanded(
                     flex: 2,
                     child: FilledButton(
-                      onPressed: (_isGeocoding || spotsModel.isLoading)
+                      onPressed:
+                          (_isGeocoding ||
+                              spotsModel.isLoading ||
+                              _errorMessage != null)
                           ? null
                           : _applyFilter,
                       child: _isGeocoding || spotsModel.isLoading
