@@ -14,20 +14,30 @@
 - **Status:** ✅ Fixed
 - **Behavior now correct:** Starts with Berlin
 
----
+### Bug #6: Startup-Inkonsistenz (Zoom/Parkplätze vs Stadt-Titel)
+- **Status:** ✅ Fixed (Commit: 84ed705)
+- **Problem:** App startete mit Berlin-Zoom, aber zeigte letzte gespeicherte Stadt
+- **Fix:** Warte auf City-Initialisierung bevor Parkplätze geladen werden
 
-## ❌ OFFEN - Priorität 1 (Kritisch)
+### Bug #7: Filter-Button während Parkplätze-Laden
+- **Status:** ✅ Fixed (Commit: 403408c)
+- **Problem:** Filterung vor Laden der Parkplätze möglich → "Keine Parkplätze gefunden"
+- **Fix:** Filter-Button deaktiviert während `spotsModel.isLoading`
 
-### Bug #1 + #3: Berlin markers not visible on map
-- **Expected:** Show 912 parking spots for Berlin on map
-- **Symptom:** 
-  - Berlin after switch: 912 Parkplätze in chip, but NO markers on map ❌
-  - München: Works perfectly ✅
-- **Root cause:** Unknown
-- **Possible causes:**
-  - Marker position outside visible map area
-  - Coordinate parsing issue for Berlin
-  - Marker layer not rendering correctly
+### Bug #8: Fehlermeldung bleibt bei erneuter Filterung
+- **Status:** ✅ Fixed (Commit: 619f7f0)
+- **Problem:** Snackbar "Keine Parkplätze gefunden" blieb auch bei erfolgreicher Filterung
+- **Fix:** Snackbar wird vor jeder neuen Filterung geschlossen
+
+### Bug #9: Fehlermeldung für nicht-implementierte Städte
+- **Status:** ✅ Fixed (Commit: 5c273c4)
+- **Problem:** Adressen in nicht-implementierten Städten (z.B. Hamburg, Fulda) zeigten nur "Adresse nicht gefunden"
+- **Fix:** Klare Fehlermeldung "Diese Stadt ist noch nicht verfügbar. Verfügbare Städte: Berlin, München, Dresden."
+
+### Bug #10: Stadtwechsel bei Adress-Suche aus anderer Stadt
+- **Status:** ✅ Fixed (Commit: 01e5690)
+- **Problem:** Adress-Suche nur in aktueller Stadt möglich
+- **Fix:** Suche in ganz Deutschland + automatischer Stadtwechsel bei Auswahl
 
 ---
 
@@ -36,19 +46,3 @@
 ### Test on Android device
 - Current testing done on Linux desktop only
 - Need to verify on actual mobile device
-
----
-
-## Debugging-Notizen
-
-### Observations:
-1. München: Lädt 558 spots, alle Marker sichtbar ✅
-2. Berlin nach Wechsel: Lädt 912 spots, Chip zeigt korrekt, ABER keine Marker ❌
-3. Karte zeigt Berlin-Region (Zoom-Out zeigt München auch)
-4. Koordinaten für Berlin kommen aus `gps_lat/gps_lon` Feldern
-
-### Nächste Schritte für Debugging:
-1. Debug-Ausgabe der Koordinaten beim Laden
-2. Prüfen ob Marker außerhalb des sichtbaren Bereichs liegen
-3. Karte initial auf Berlin Zentrum (52.52, 13.405) zoomen
-4. Koordinaten-Format prüfen (sind es wirklich Lat/Lng?)
