@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # TODO - Bugs to Fix
 
 ## ✅ ERLEDIGT

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef FLUTTER_MY_APPLICATION_H_
 #define FLUTTER_MY_APPLICATION_H_
 

@@ -1,4 +1,7 @@
-import 'dart:convert';
+// SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import '../models/city_config.dart';

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import json
 import urllib.request
 import ssl

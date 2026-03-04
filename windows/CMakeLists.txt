@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
 project(parklibre LANGUAGES CXX)

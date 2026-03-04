@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -198,7 +202,6 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  static const _berlinCenter = LatLng(52.52, 13.405);
   static const _initialZoom = 12.0;
   static const _locateZoom = 14.5;
 
@@ -1000,27 +1003,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _InfoRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          Text(text),
-        ],
-      ),
-    );
-  }
-}
-
 class _DetailCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -1307,7 +1289,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   Future<void> _animateToLocation(LatLng target) async {
     // Animation mit mehreren Schritten für "schönen Flug"
-    const duration = Duration(milliseconds: 1200);
     final startZoom = widget.mapController.camera.zoom;
     final targetZoom = 16.0;
 
@@ -1389,9 +1370,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     context.read<ParkingSpotsModel>().applyFilter(filter);
 
     // Callback für Zoom auf Radius
-    if (widget.onFilterApplied != null && center != null) {
-      widget.onFilterApplied!(center, _radius);
-    }
+    widget.onFilterApplied!(center, _radius);
 
     Navigator.pop(context);
   }
@@ -1404,7 +1383,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final spotsModel = context.watch<ParkingSpotsModel>();
-    final locationModel = context.watch<LocationModel>();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.7,

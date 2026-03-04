@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Johannes Näder <git@pub.nextwelt.de>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 name: parklibre
 description: Open-source app displaying disabled parking spaces in Berlin (and later globally).
 publish_to: 'none'
