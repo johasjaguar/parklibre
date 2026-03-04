@@ -13,21 +13,21 @@
 - Keine TODO/FIXME/HACK-Kommentare
 - Keine hartcodierten Secrets/Keys
 
-### ❌ Verbesserungsbedarf
+### ✅ Erledigt (2026-03-04)
+- Widget-Test ersetzt durch einfachen App-Test
+- Unused fields/classes/variables entfernt:
+  - `_berlinCenter` entfernt
+  - `_InfoRow` Klasse entfernt  
+  - `duration` Variable entfernt
+  - `locationModel` im FilterBottomSheet entfernt
+  - Unnecessary null-check entfernt
+  - Unused import `dart:convert` in parking_service.dart entfernt
 
-| Issue | Datei | Zeile | Typ |
-|-------|-------|-------|-----|
-| Unused field `_berlinCenter` | main.dart | 205 | Warning |
-| Unused element `_InfoRow` | main.dart | 1007 | Warning |
-| Unused variable `duration` | main.dart | 1314 | Warning |
-| 7x `use_build_context_synchronously` | main.dart | mehrfach | Info |
-| Unnecessary null check | main.dart | 1396 | Warning |
-
-### Empfehlung
-```bash
-flutter analyze
+### ✅ Ergebnis
 ```
-Warning und Infos beheben.
+flutter analyze
+# Keine Warnings mehr! ✅
+```
 
 ---
 
@@ -140,7 +140,7 @@ GPL-3.0-or-later
 | Priorität | Aufgabe | Status |
 |-----------|---------|--------|
 | 1 | Widget-Test fixen | ✅ Erledigt |
-| 2 | Unused Code entfernen | Offen |
+| 2 | Unused Code entfernen | ✅ Erledigt |
 | 3 | CI-Pipeline einrichten | Offen |
 | 4 | REUSE-TOML erstellen | Offen |
 | 5 | README.md verbessern | Offen |
