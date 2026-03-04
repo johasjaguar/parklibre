@@ -47,6 +47,24 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 ---
 
+## ❌ OFFEN - Bug Reports von GrapheneOS Nutzer
+
+### Bug #11: Standort-Lokalisierung auf GrapheneOS
+- **Problem:** Nutzer erteilt "Einmalig" Standort-Freigabe, aber App kann Standort nicht lokalisieren
+- **Arbeitsumgebung:** GrapheneOS
+- **Funktioniert:** "Bei Nutzung der App erlauben" funktioniert
+- **Mögliche Ursache:** Geolocator requesting permission via "one-time" but not handling the permission change correctly
+- **Lösungsidee:** Prüfen ob Geolocator korrekt mit "Bei Nutzung der App erlauben" umgeht vs "Einmalig"
+
+### Bug #12: "Standort nicht gefunden" Snackbar verschwindet nicht / stackt
+- **Status:** ✅ Fixed
+- **Problem:** Snackbar blieb ewig sichtbar oder stackte übereinander
+- **Fix:** 
+  1. `hideCurrentSnackBar()` vor dem Anzeigen aufgerufen
+  2. Duration auf 8 Sekunden erhöht (da App auch ohne Standort nutzbar)
+
+---
+
 ## ❌ OFFEN - Priorität 2
 
 ### Test on Android device

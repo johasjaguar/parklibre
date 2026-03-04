@@ -248,9 +248,11 @@ class _MapScreenState extends State<MapScreen> {
       await _animateToLocation(locationModel.currentLocation!);
     } else if (mounted) {
       final cityModel = context.read<CityModel>();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(locationModel.error ?? 'Standort nicht verfügbar'),
+          duration: const Duration(seconds: 8),
           action: SnackBarAction(
             label: '${cityModel.currentCityName} Zentrum',
             onPressed: () =>
@@ -1320,10 +1322,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       center = locationModel.currentLocation ?? const LatLng(52.52, 13.405);
 
       if (locationModel.currentLocation == null && mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Standort nicht verfügbar, verwende Berlin Mitte'),
-            duration: Duration(seconds: 2),
+            duration: Duration(seconds: 8),
           ),
         );
       }
