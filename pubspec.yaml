@@ -70,6 +70,7 @@ flutter:
 
   assets:
     - assets/logo_foreground.png
+    - assets/logo_parklibre_int.png
     - assets/fonts/
 
   fonts:

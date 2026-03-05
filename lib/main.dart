@@ -277,29 +277,19 @@ class _MapScreenState extends State<MapScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/logo_foreground.png',
-                  height: 26,
+                  'assets/logo_parklibre_int.png',
+                  height: 30,
                   fit: BoxFit.contain,
                 ),
-                const SizedBox(width: 8),
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontFamily: 'DIN1451Mittelschrift',
-                      color: Colors.white,
-                      fontSize: 20,
-                    ),
-                    children: [
-                      const TextSpan(
-                        text: 'ParkLibre ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: cityModel.currentCityName),
-                    ],
+                const Spacer(),
+                Text(
+                  cityModel.currentCityName,
+                  style: TextStyle(
+                    fontFamily: 'DIN1451Mittelschrift',
+                    color: Colors.grey[400],
+                    fontSize: 16,
                   ),
                 ),
               ],
