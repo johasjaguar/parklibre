@@ -500,6 +500,13 @@ class _MapScreenState extends State<MapScreen> {
               ),
               const SizedBox(height: 16),
               FloatingActionButton(
+                heroTag: 'nearest',
+                onPressed: _navigateToNearestSpot,
+                tooltip: 'Zum nächsten Parkplatz navigieren',
+                child: const Icon(Icons.navigation),
+              ),
+              const SizedBox(height: 16),
+              FloatingActionButton(
                 heroTag: 'refresh',
                 onPressed: () => context.read<ParkingSpotsModel>().loadSpots(),
                 child: const Icon(Icons.refresh),
@@ -922,6 +929,71 @@ class _MapScreenState extends State<MapScreen> {
           duration: Duration(seconds: 3),
         ),
       );
+    }
+  }
+
+  Future<void> _navigateToNearestSpot() async {
+    final locationModel = context.read<LocationModel>();
+    final spotsModel = context.read<ParkingSpotsModel>();
+
+    // Automatisch Standort ermitteln wenn nicht verfügbar
+    if (locationModel.currentLocation == null) {
+      await locationModel.getCurrentLocation();
+    }
+
+    // Prüfe ob aktueller Standort verfügbar ist
+    if (locationModel.currentLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Standort konnte nicht ermittelt werden. Bitte Standortberechtigung erteilen.',
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Prüfe ob Parkplätze geladen sind
+    if (spotsModel.spots.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Keine Parkplätze geladen'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Finde nächsten Parkplatz
+    final currentPos = locationModel.currentLocation!;
+    DisabledParkingSpot? nearestSpot;
+    double minDistance = double.infinity;
+
+    for (final spot in spotsModel.spots) {
+      final distance = DistanceCalculator.calculateDistance(
+        currentPos,
+        spot.position,
+      );
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestSpot = spot;
+      }
+    }
+
+    if (nearestSpot != null) {
+      // Zeige Info an und starte Navigation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Nächster Parkplatz: ${DistanceCalculator.formatDistance(minDistance)} entfernt',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      await _navigateToSpot(nearestSpot);
     }
   }
 
