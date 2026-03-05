@@ -286,16 +286,20 @@ class _MapScreenState extends State<MapScreen> {
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'ParkLibre ${cityModel.currentCityName}',
+                RichText(
+                  text: TextSpan(
                     style: TextStyle(
                       fontFamily: 'DIN1451Mittelschrift',
                       color: Colors.white,
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    children: [
+                      const TextSpan(
+                        text: 'ParkLibre ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: cityModel.currentCityName),
+                    ],
                   ),
                 ),
               ],
