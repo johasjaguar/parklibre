@@ -70,6 +70,12 @@ flutter:
 
   assets:
     - assets/logo_foreground.png
+    - assets/fonts/
+
+  fonts:
+    - family: DIN1451Mittelschrift
+      fonts:
+        - asset: assets/fonts/u_din_1451_mittelschrift.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
