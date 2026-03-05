@@ -276,8 +276,21 @@ class _MapScreenState extends State<MapScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('ParkLibre - ${cityModel.currentCityName}'),
-            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/logo_foreground.png',
+                  height: 20,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'ParkLibre ${cityModel.currentCityName}',
+                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF005A8C),
           ),
           body: Consumer2<ParkingSpotsModel, LocationModel>(
             builder: (context, spotsModel, locationModel, child) {
