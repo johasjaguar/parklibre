@@ -568,9 +568,10 @@ class _MapScreenState extends State<MapScreen> {
               ),
               const SizedBox(height: 16),
               FloatingActionButton(
-                heroTag: 'locate',
-                onPressed: _locateMe,
-                child: const Icon(Icons.my_location),
+                heroTag: 'nearest',
+                onPressed: _navigateToNearestSpot,
+                tooltip: 'Zum nächsten Parkplatz navigieren',
+                child: const Icon(Icons.navigation),
               ),
               const SizedBox(height: 16),
               FloatingActionButton(
@@ -581,9 +582,9 @@ class _MapScreenState extends State<MapScreen> {
               ),
               const SizedBox(height: 16),
               FloatingActionButton(
-                heroTag: 'refresh',
-                onPressed: () => context.read<ParkingSpotsModel>().loadSpots(),
-                child: const Icon(Icons.refresh),
+                heroTag: 'locate',
+                onPressed: _locateMe,
+                child: const Icon(Icons.my_location),
               ),
             ],
           ),
