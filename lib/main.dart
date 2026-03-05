@@ -206,6 +206,9 @@ class _MapScreenState extends State<MapScreen> {
   static const _locateZoom = 14.5;
 
   final MapController _mapController = MapController();
+  DisabledParkingSpot? _nearestSpot;
+  double? _nearestDistance;
+  Timer? _nearestInfoTimer;
 
   @override
   void initState() {
@@ -227,6 +230,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _mapController.dispose();
+    _nearestInfoTimer?.cancel();
     super.dispose();
   }
 
@@ -454,6 +458,76 @@ class _MapScreenState extends State<MapScreen> {
                       bottom: 80,
                       right: 16,
                       child: CircularProgressIndicator(),
+                    ),
+                  if (_nearestSpot != null && _nearestDistance != null)
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      right: 16,
+                      child: GestureDetector(
+                        onTap: () {
+                          _nearestInfoTimer?.cancel();
+                          _navigateToSpot(_nearestSpot!);
+                        },
+                        child: Card(
+                          color: const Color(0xFF005A8C),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.navigation,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        DistanceCalculator.formatDistance(
+                                          _nearestDistance!,
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      Text(
+                                        _nearestSpot!.location,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 12,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    _nearestInfoTimer?.cancel();
+                                    setState(() {
+                                      _nearestSpot = null;
+                                      _nearestDistance = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               );
@@ -982,17 +1056,27 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     if (nearestSpot != null) {
-      // Zeige Info an und starte Navigation
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Nächster Parkplatz: ${DistanceCalculator.formatDistance(minDistance)} entfernt',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      // Speichere für State und zeige Info oben
+      setState(() {
+        _nearestSpot = nearestSpot;
+        _nearestDistance = minDistance;
+      });
+
+      // Timer für automatisches Ausblenden nach 20 Sekunden
+      _nearestInfoTimer?.cancel();
+      _nearestInfoTimer = Timer(const Duration(seconds: 20), () {
+        if (mounted) {
+          setState(() {
+            _nearestSpot = null;
+            _nearestDistance = null;
+          });
+        }
+      });
+
+      // Kurze Pause damit UI rendern kann
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Starte Navigation automatisch
       await _navigateToSpot(nearestSpot);
     }
   }
@@ -1076,6 +1160,12 @@ class _MapScreenState extends State<MapScreen> {
                           // Service im ParkingSpotsModel aktualisieren
                           final spotsModel = context.read<ParkingSpotsModel>();
                           spotsModel.setService(cityModel.service);
+                          // Info-Balken schließen bei Stadtwechsel
+                          _nearestInfoTimer?.cancel();
+                          setState(() {
+                            _nearestSpot = null;
+                            _nearestDistance = null;
+                          });
                           // Dann Daten laden
                           spotsModel.loadSpots();
                           // Dialog schließen
