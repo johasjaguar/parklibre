@@ -100,3 +100,22 @@ windows/flutter/ephemeral/
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !**/ios/**/project.pbxproj
+
+# Debug/Temp files
+test_*.py
+bom.json
+scan_results.json
+# Unsupported platforms (Android only for now)
+macos/
+web/
+windows/
+ios/
+
+# DevTools (persönliche Einstellungen)
+devtools_options.yaml
+
+# Design-Dateien (nicht öffentlich)
+logos/
+
+# Interne Planung
+TODO.md
