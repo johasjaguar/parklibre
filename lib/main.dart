@@ -551,6 +551,17 @@ class _MapScreenState extends State<MapScreen> {
                 },
               ),
               const SizedBox(height: 16),
+              // Such-Button
+              FloatingActionButton(
+                heroTag: 'search',
+                onPressed: () => _showFilterSheet(
+                  context,
+                  initialMode: FilterMode.targetAddress,
+                ),
+                tooltip: 'Adresse suchen',
+                child: const Icon(Icons.search),
+              ),
+              const SizedBox(height: 16),
               // Filter-Button
               Consumer<ParkingSpotsModel>(
                 builder: (context, model, _) {
@@ -1075,7 +1086,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _showFilterSheet(BuildContext context) {
+  void _showFilterSheet(BuildContext context, {FilterMode? initialMode}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1088,6 +1099,7 @@ class _MapScreenState extends State<MapScreen> {
           // Zoom to show entire radius
           _zoomToRadius(center, radius);
         },
+        initialMode: initialMode,
       ),
     );
   }
@@ -1230,11 +1242,13 @@ class _DetailCard extends StatelessWidget {
 class FilterBottomSheet extends StatefulWidget {
   final MapController mapController;
   final Function(LatLng center, double radius)? onFilterApplied;
+  final FilterMode? initialMode;
 
   const FilterBottomSheet({
     super.key,
     required this.mapController,
     this.onFilterApplied,
+    this.initialMode,
   });
 
   @override
@@ -1262,8 +1276,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _radius = currentFilter.radiusMeters;
       _addressController.text = currentFilter.address ?? '';
     } else {
-      _mode = FilterMode.currentLocation;
-      _radius = 1000; // Default 1km
+      // Nutze initialMode wenn vorhanden, sonst Default
+      _mode = widget.initialMode ?? FilterMode.currentLocation;
+      _radius = 500; // Default 500m
     }
   }
 
