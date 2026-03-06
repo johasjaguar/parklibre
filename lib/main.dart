@@ -575,13 +575,6 @@ class _MapScreenState extends State<MapScreen> {
               ),
               const SizedBox(height: 16),
               FloatingActionButton(
-                heroTag: 'nearest',
-                onPressed: _navigateToNearestSpot,
-                tooltip: 'Zum nächsten Parkplatz navigieren',
-                child: const Icon(Icons.navigation),
-              ),
-              const SizedBox(height: 16),
-              FloatingActionButton(
                 heroTag: 'locate',
                 onPressed: _locateMe,
                 child: const Icon(Icons.my_location),
