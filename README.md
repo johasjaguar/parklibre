@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 ParkLibre is an experiment exploring the challenges and opportunities of vibe coding, especially in the context of Free Software. It was created using AI models (**MiniMax**, **Kimi 2.5**, **GLM-5**) through OpenCode with **Nebius**, **Zen**, and **OpenCode Go** as AI service providers.
 
-**Time investment:** ~5-7 hours of prompting (much of it waiting and testing). Compliance checks, licensing, and release preparation took significantly longer.
+**Time investment:** ~5-7 hours of prompting (and much of it waiting and testing). Compliance checks, licensing, and release preparation took significantly longer.
 
 **Current status:** Functional on several tested Android devices, but still very much an MVP. Many useful features are missing. Since I only partially understand the code myself, I'm very interested in feedback!
 
@@ -49,7 +49,7 @@ Finding accessible parking for people with disabilities is currently difficult. 
 |------|------------|----------|
 | Berlin | [Geoportal Berlin](https://daten.berlin.de/) | ~900 spots |
 | Munich | [Open Data Portal Munich](https://opendata.muenchen.de/) | ~550 spots |
-| Dresden | [Stadt Dresden Open Data](https://opendata.dresden.de/) | ~50 spots |
+| Dresden | [Stadt Dresden Open Data](https://opendata.dresden.de/) | ~480 spots |
 
 ### Download
 
@@ -64,12 +64,25 @@ flutter pub get
 flutter build apk --release
 ```
 
+#### Linux Development
+
+To build and test on Linux (without navigation functionality):
+
+```bash
+flutter pub get
+flutter run -d linux
+```
+
+Navigation features are disabled on Linux as they require mobile-specific APIs.
+
+### AI Models License Note
+
+The AI models used to create this app (MiniMax, Kimi 2.5, GLM-5) are **not Free Software**. While ParkLibre itself is GPL-3.0 licensed, the tools used to create it have their own proprietary licenses.
+
 ### What's Next?
 
-- [ ] More cities (Hamburg, Cologne, Frankfurt...)
+- [ ] More cities (Hamburg, Cologne, Frankfurt...) and more regions (potentially Overpass API)
 - [ ] Offline caching
-- [ ] Real-time availability
-- [ ] iOS support (help wanted!)
 
 ---
 
@@ -81,7 +94,7 @@ flutter build apk --release
 
 ParkLibre ist ein Experiment, das die Herausforderungen und Chancen von Vibe Coding erkundet, besonders im Umfeld Freier Software. Erstellt mit KI-Modellen (**MiniMax**, **Kimi 2.5**, **GLM-5**) über OpenCode mit **Nebius**, **Zen** und **OpenCode Go** als KI-Service-Provider.
 
-**Zeitaufwand:** ~5-7 Stunden Prompting (viel Warten und Testen). Compliance-Prüfungen, Lizenzierung und Veröffentlichungsvorbereitung haben deutlich länger gedauert.
+**Zeitaufwand:** ~5-7 Stunden Prompting (und viel Warten und Testen). Compliance-Prüfungen, Lizenzierung und Veröffentlichungsvorbereitung haben deutlich länger gedauert.
 
 **Aktueller Status:** Funktioniert auf mehreren getesteten Android-Geräten, aber immer noch ein MVP. Viele nützliche Funktionen fehlen. Da ich den Code selbst nur ansatzweise verstehe, bin ich sehr an Feedback interessiert!
 
@@ -103,7 +116,7 @@ Behindertenparkplätze zu finden ist aktuell schwierig. Sie sind zwar z.B. in OS
 |-------|------------|-----------|
 | Berlin | [Geoportal Berlin](https://daten.berlin.de/) | ~900 Plätze |
 | München | [Open Data Portal München](https://opendata.muenchen.de/) | ~550 Plätze |
-| Dresden | [Stadt Dresden Open Data](https://opendata.dresden.de/) | ~50 Plätze |
+| Dresden | [Stadt Dresden Open Data](https://opendata.dresden.de/) | ~480 Plätze |
 
 ### Download
 
@@ -118,12 +131,25 @@ flutter pub get
 flutter build apk --release
 ```
 
+#### Linux-Entwicklung
+
+Um unter Linux zu bauen und zu testen (ohne Navigations-Funktionalität):
+
+```bash
+flutter pub get
+flutter run -d linux
+```
+
+Navigations-Funktionen sind unter Linux deaktiviert, da sie mobile-spezifische APIs benötigen.
+
+### Hinweis zu KI-Modell-Lizenzen
+
+Die KI-Modelle, die zur Erstellung dieser App verwendet wurden (MiniMax, Kimi 2.5, GLM-5), sind **keine Freie Software**. Während ParkLibre selbst unter GPL-3.0 lizenziert ist, haben die verwendeten Werkzeuge ihre eigenen proprietären Lizenzen.
+
 ### Was kommt als Nächstes?
 
-- [ ] Mehr Städte (Hamburg, Köln, Frankfurt...)
+- [ ] Mehr Städte (Hamburg, Köln, Frankfurt...) und weitere Regionen (potentiell Overpass API)
 - [ ] Offline-Caching
-- [ ] Echtzeit-Verfügbarkeit
-- [ ] iOS-Unterstützung (Hilfe gesucht!)
 
 ---
 
@@ -143,10 +169,8 @@ Source: [Font Library](https://fontlibrary.org/face/u-din-1451-mittelschrift)
 ## 🤝 Contributing & Feedback
 
 Since this is a learning project, I'm especially interested in:
-- Code reviews (be gentle, I'm a beginner!)
 - Bug reports
 - Feature requests
-- Help with iOS support
 
 Please open an issue on Codeberg.
 
