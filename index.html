@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkLibre - Parkplätze für Menschen mit Behinderung</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <img src="assets/logo_parklibre.png" alt="ParkLibre Logo">
+                <span>ParkLibre</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#screenshots">Screenshots</a>
+                <a href="#download">Download</a>
+                <a href="https://codeberg.org/johas/parklibre" target="_blank">Code</a>
+                <a href="index-en.html" class="lang-switch">🇬🇧 EN</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Parkplätze für Menschen mit Behinderung</h1>
+                <p class="subtitle">Die Open-Source-App für barrierefreies Parken in deutschen Städten</p>
+                <div class="cta-buttons">
+                    <a href="#download" class="btn btn-primary">Jetzt downloaden</a>
+                    <a href="https://codeberg.org/johas/parklibre" class="btn btn-secondary">Auf Codeberg ansehen</a>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number">3</span>
+                        <span class="stat-label">Städte</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">1900+</span>
+                        <span class="stat-label">Parkplätze</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">100%</span>
+                        <span class="stat-label">Open Source</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <img src="assets/01_map_overview.png" alt="ParkLibre App Screenshot" class="app-screenshot">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="screenshots" class="screenshots">
+        <div class="container">
+            <h2>Die App in Aktion</h2>
+            <div class="screenshots-grid">
+                <div class="screenshot-card">
+                    <img src="assets/01_map_overview.png" alt="Kartenübersicht">
+                    <p>Kartenübersicht mit allen Parkplätzen</p>
+                </div>
+                <div class="screenshot-card">
+                    <img src="assets/02_filter_sheet.png" alt="Filter">
+                    <p>Filter nach Radius und Kriterien</p>
+                </div>
+                <div class="screenshot-card">
+                    <img src="assets/03_parking_details.png" alt="Details">
+                    <p>Detaillierte Parkplatz-Informationen</p>
+                </div>
+                <div class="screenshot-card">
+                    <img src="assets/04_navigation_info.png" alt="Navigation">
+                    <p>Direkte Navigation zum Ziel</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Was kann ParkLibre?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3>Interaktive Karte</h3>
+                    <p>Alle öffentlichen Parkplätze für Menschen mit Behinderung auf einer übersichtlichen Karte – aktuell für Berlin, München und Dresden.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Adresssuche</h3>
+                    <p>Finde Parkplätze in der Nähe deines Ziels. Einfach Adresse eingeben und los geht's!</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧭</div>
+                    <h3>One-Tap Navigation</h3>
+                    <p>Mit einem Klick zum nächsten freien Parkplatz navigieren. Kein lästiges Suchen mehr.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📍</div>
+                    <h3>Radius-Filter</h3>
+                    <p>Perfekt, um Parkplätze im nahen oder weiteren Umfeld zu finden.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Open Data</h3>
+                    <p>Nutzt offizielle Stadt-APIs (WFS-Dienste) für aktuelle und zuverlässige Daten.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Freie Software</h3>
+                    <p>GPL-3.0 lizenziert. Keine Tracking, keine Werbung, 100% transparent.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="cities" class="cities">
+        <div class="container">
+            <h2>Unterstützte Städte</h2>
+            <div class="cities-grid">
+                <div class="city-card">
+                    <div class="city-icon">🏛️</div>
+                    <h3>Berlin</h3>
+                    <span class="city-count">~900 Plätze</span>
+                </div>
+                <div class="city-card">
+                    <div class="city-icon">🍺</div>
+                    <h3>München</h3>
+                    <span class="city-count">~550 Plätze</span>
+                </div>
+                <div class="city-card">
+                    <div class="city-icon">🏰</div>
+                    <h3>Dresden</h3>
+                    <span class="city-count">~480 Plätze</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="download" class="download">
+        <div class="container">
+            <h2>Hol dir ParkLibre</h2>
+            <div class="download-content">
+                <div class="download-card">
+                    <div class="platform-icon">📱</div>
+                    <h3>Android</h3>
+                    <p>Mindestens Android 8.0 (API 26)</p>
+                    <a href="https://codeberg.org/johas/parklibre/releases" class="btn btn-primary btn-large">APK Download</a>
+                </div>
+            </div>
+            <div class="build-info">
+                <h4>Oder bau es selbst:</h4>
+                <pre><code>flutter pub get
+flutter build apk --release</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="about">
+        <div class="container">
+            <h2>Über das Projekt</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p><strong>ParkLibre</strong> ist ein Experiment, das die Herausforderungen und Chancen von <em>Vibe Coding</em> erkundet – besonders im Umfeld Freier Software.</p>
+                    <p>Erstellt mit KI-Modellen (MiniMax, Kimi 2.5, GLM-5) über OpenCode. Zeitaufwand: ~5-7 Stunden Prompting.</p>
+                    <p><strong>Disclaimer:</strong> Das ist meine erste App. Ich bin kein Entwickler und habe die App durch Vibe Coding erstellt. Feedback ist sehr willkommen!</p>
+                </div>
+                <div class="about-links">
+                    <a href="https://codeberg.org/johas/parklibre" class="btn btn-secondary">Auf Codeberg</a>
+                    <a href="https://codeberg.org/johas/parklibre/issues" class="btn btn-secondary">Issues melden</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="assets/logo_parklibre.png" alt="ParkLibre">
+                </div>
+                <div class="footer-links">
+                    <a href="impressum.html">Impressum</a>
+                    <span class="separator">•</span>
+                    <a href="LICENSES/GPL-3.0-or-later.txt">GPL-3.0</a>
+                    <span class="separator">•</span>
+                    <span>© 2026 Johannes Näder</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
