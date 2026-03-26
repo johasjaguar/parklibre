@@ -83,6 +83,7 @@ The AI models used to create this app (MiniMax, Kimi 2.5, GLM-5) are **not Free 
 
 - [ ] More cities (Hamburg, Cologne, Frankfurt...) and more regions (potentially Overpass API)
 - [ ] Offline caching
+- [ ] Rewrite in Qt
 
 ---
 
@@ -150,6 +151,7 @@ Die KI-Modelle, die zur Erstellung dieser App verwendet wurden (MiniMax, Kimi 2.
 
 - [ ] Mehr Städte (Hamburg, Köln, Frankfurt...) und weitere Regionen (potentiell Overpass API)
 - [ ] Offline-Caching
+- [ ] Neuimplementierung in Qt
 
 ---
 
@@ -183,5 +185,3 @@ Please open an issue on Codeberg.
 - Thanks to the Flutter and Dart communities
 
 ---
-
-**Made with ❤️ and 🤖 in Germany**
