@@ -1,0 +1,58 @@
+{
+  "type": "FeatureCollection",
+  "links": [
+    {"rel": "self", "type": "application/json", "title": "Dieses Dokument", "href": "https://example.invalid/ogcapi/collections/L1113/items?limit=1000"}
+  ],
+  "timeStamp": "2026-10-12T13:35:18.0918041Z",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::4326"}},
+        "coordinates": [13.742268570662187, 51.02948009055888]
+      },
+      "id": 1,
+      "properties": {
+        "stellplatzanzahl": 1,
+        "nutzungszeit": "von 00:00 Uhr bis 24:00 Uhr",
+        "bewertung_ohne_seitenabstand_txt": "Stellplatz uneingeschränkt nutzbar",
+        "kks_mdd": "24.05.2021 07:00:16",
+        "maptip_de": "Max-Liebermann-Straße 3, Südvorstadt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::4326"}},
+        "coordinates": [13.7351, 51.0402]
+      },
+      "id": 10,
+      "properties": {
+        "stellplatzanzahl": 2,
+        "nutzungszeit": "Mo–Fr 9–18 Uhr, Sa 9–14 Uhr",
+        "bewertung_ohne_seitenabstand_txt": "Stellplatz mit Einschränkungen nutzbar",
+        "kks_mdd": "13.05.2023 14:27:31",
+        "maptip_de": "Wilsdruffer Straße 2, Altstadt"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::4326"}},
+        "coordinates": [13.8231, 51.0108]
+      },
+      "id": 1004,
+      "properties": {
+        "stellplatzanzahl": 1,
+        "nutzungszeit": null,
+        "bewertung_ohne_seitenabstand_txt": "Stellplatz uneingeschränkt nutzbar",
+        "kks_mdd": null,
+        "maptip_de": "Straße des 17. Juni 1, Klotzsche"
+      }
+    }
+  ],
+  "numberReturned": 3
+}

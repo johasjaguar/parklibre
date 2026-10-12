@@ -35,7 +35,10 @@ class DresdenParkingService extends ParkingService {
       );
     }
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
+    // Explizit als UTF-8 dekodieren: der Dienst sendet
+    // "application/geo+json" ohne charset, package:http wuerde sonst
+    // latin1 annehmen und Umlaute zerstoeren.
+    final data = _decodeJson(response.bodyBytes);
     return _parseOgcApiResponse(data);
   }
 
@@ -72,8 +75,13 @@ class DresdenParkingService extends ParkingService {
       );
     }
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
+    final data = _decodeJson(response.bodyBytes);
     return _parseOgcApiResponse(data);
+  }
+
+  /// Dekodiert die JSON-Antwort ausdruecklich als UTF-8.
+  Map<String, dynamic> _decodeJson(List<int> bodyBytes) {
+    return json.decode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
   }
 
   /// Parst OGC API GeoJSON Response
@@ -98,8 +106,12 @@ class DresdenParkingService extends ParkingService {
         position = cityConfig.defaultCenter;
       }
 
-      // ID
-      final id = props[mapping['id']]?.toString() ?? '';
+      // ID: in den OGC-API-Daten steht die ID auf Feature-Ebene ("id");
+      // die Properties enthalten kein ID-Feld.
+      final id =
+          f['id']?.toString() ??
+          props[mapping['id']]?.toString() ??
+          '';
 
       // Location: Koordinaten als String (da keine Adresse verfügbar)
       final count = (props[mapping['count']] as num?)?.toInt() ?? 1;
