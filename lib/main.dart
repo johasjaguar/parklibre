@@ -23,15 +23,34 @@ void main() {
 }
 
 class ParkLibreApp extends StatelessWidget {
-  const ParkLibreApp({super.key});
+  const ParkLibreApp({
+    super.key,
+    this.serviceFactory,
+    this.nominatim,
+    this.tileProvider,
+  });
+
+  /// Optionaler Ersatz für die Parkplatz-Dienste (Tests/Offline).
+  final ParkingServiceFactory? serviceFactory;
+
+  /// Optionaler Ersatz für den Geocoding-Dienst (Tests/Offline).
+  final NominatimService? nominatim;
+
+  /// Optionaler Ersatz für den Karten-Kachel-Provider (Tests/Offline).
+  final TileProvider? tileProvider;
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => CityModel()),
+        ChangeNotifierProvider(
+          create: (_) => CityModel(serviceFactory: serviceFactory),
+        ),
         ChangeNotifierProvider(create: (_) => ParkingSpotsModel()),
         ChangeNotifierProvider(create: (_) => LocationModel()),
+        // Gemeinsamer Geocoding-Dienst: begrenzt Suche- und
+        // Reverse-Anfragen gemeinsam und teilt Ergebnisse.
+        Provider<NominatimService>.value(value: nominatim ?? NominatimService()),
       ],
       child: MaterialApp(
         title: 'ParkLibre',
@@ -39,7 +58,7 @@ class ParkLibreApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        home: const MapScreen(),
+        home: MapScreen(tileProvider: tileProvider),
       ),
     );
   }
@@ -195,7 +214,10 @@ class ParkingSpotsModel extends ChangeNotifier {
 }
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({super.key, this.tileProvider});
+
+  /// Optionaler Ersatz für den Karten-Kachel-Provider (Tests/Offline).
+  final TileProvider? tileProvider;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -368,10 +390,17 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        // Ohne Software-Update wechselbar (Nutzungsvorgabe
+                        // der OSM-Kacheldienste):
+                        // --dart-define=OSM_TILE_URL=https://...
+                        urlTemplate: const String.fromEnvironment(
+                          'OSM_TILE_URL',
+                          defaultValue:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        ),
                         userAgentPackageName: 'de.parklibre',
                         maxZoom: 19,
+                        tileProvider: widget.tileProvider,
                       ),
                       MarkerLayer(
                         key: ValueKey('markers_${spotsModel.loadCounter}'),
@@ -432,6 +461,9 @@ class _MapScreenState extends State<MapScreen> {
                             ],
                           ),
                         ),
+                      // Quellenangaben: sichtbar und verlinkt
+                      // (Nutzungsvorgaben von OSM und Nominatim)
+                      const _MapAttribution(),
                     ],
                   ),
                   Positioned(
@@ -600,6 +632,11 @@ class _MapScreenState extends State<MapScreen> {
   void _showSpotDetails(BuildContext context, DisabledParkingSpot spot) {
     // Berechne Entfernung zum Filter-Zentrum wenn Filter aktiv
     final spotsModel = context.read<ParkingSpotsModel>();
+    // Reverse-Geocoding ueber den gemeinsamen Dienst: geteilte,
+    // gecachte Anfrage – eine einzige Anfrage pro Detailansicht.
+    final reverseAddress = spot.addressSource == AddressSource.needsReverse
+        ? context.read<NominatimService>().reverseGeocode(spot.position)
+        : null;
     String? distanceText;
     String distanceTitle = 'Entfernung (Luftlinie)';
     if (spotsModel.isFiltered && spotsModel.currentFilter?.center != null) {
@@ -680,14 +717,7 @@ class _MapScreenState extends State<MapScreen> {
                               if (spot.addressSource ==
                                   AddressSource.needsReverse)
                                 FutureBuilder<String?>(
-                                  future: () async {
-                                    final nom = NominatimService();
-                                    final addr = await nom.reverseGeocode(
-                                      spot.position,
-                                    );
-                                    nom.dispose();
-                                    return addr;
-                                  }(),
+                                  future: reverseAddress,
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
@@ -847,14 +877,7 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       if (spot.addressSource == AddressSource.needsReverse)
                         FutureBuilder<String?>(
-                          future: () async {
-                            final nom = NominatimService();
-                            final addr = await nom.reverseGeocode(
-                              spot.position,
-                            );
-                            nom.dispose();
-                            return addr;
-                          }(),
+                          future: reverseAddress,
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
@@ -1239,6 +1262,69 @@ class _DetailCard extends StatelessWidget {
   }
 }
 
+/// Sichtbare, verlinkte Quellenangaben auf der Karte.
+///
+/// Die Nutzungsvorgaben der OSM-Kacheldienste verlangen eine klar
+/// sichtbare Attribution, die nicht hinter Bedienelementen versteckt ist.
+class _MapAttribution extends StatelessWidget {
+  const _MapAttribution();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _AttributionLink(
+                text: '© OpenStreetMap-Mitwirkende',
+                url: 'https://www.openstreetmap.org/copyright',
+              ),
+              SizedBox(width: 12),
+              _AttributionLink(
+                text: 'Geocoding: Nominatim',
+                url: 'https://nominatim.org',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Verlinkte Quellenangabe (öffnet die Seite im Browser).
+class _AttributionLink extends StatelessWidget {
+  const _AttributionLink({required this.text, required this.url});
+
+  final String text;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 11,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class FilterBottomSheet extends StatefulWidget {
   final MapController mapController;
   final Function(LatLng center, double radius)? onFilterApplied;
@@ -1262,13 +1348,18 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   bool _isGeocoding = false;
   bool _isSearching = false;
   String? _errorMessage;
-  Timer? _debounceTimer;
   List<Map<String, dynamic>> _suggestions = [];
   bool _showSuggestions = false;
+  LatLng? _selectedCenter;
+  String? _selectedAddress;
+
+  /// Gemeinsamer Geocoding-Dienst (begrenzt alle Anfragen).
+  late final NominatimService _nominatim;
 
   @override
   void initState() {
     super.initState();
+    _nominatim = context.read<NominatimService>();
     // Lade aktuelle Filter-Einstellungen
     final currentFilter = context.read<ParkingSpotsModel>().currentFilter;
     if (currentFilter != null) {
@@ -1284,47 +1375,47 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
     _addressController.dispose();
     super.dispose();
   }
 
+  /// Adressfeld wurde geaendert.
+  ///
+  /// Bewusst ohne Suche: Auto-complete ueber die Nominatim-API ist laut
+  /// Nutzungsvorgaben nicht erlaubt. Es wird nur gesucht, wenn die Suche
+  /// explizit ausgeloest wird (Button oder Enter).
   void _onAddressChanged(String value) {
-    _debounceTimer?.cancel();
+    setState(() {
+      // Angezeigte Vorschlaege gehoeren zur vorherigen Suche.
+      _suggestions = [];
+      _showSuggestions = false;
+      _errorMessage = null;
+      // Auswahl ist nicht mehr gueltig, wenn der Text geaendert wird.
+      _selectedCenter = null;
+      _selectedAddress = null;
+    });
+  }
 
-    if (value.length < 3) {
-      setState(() {
-        _suggestions = [];
-        _showSuggestions = false;
-        _errorMessage = null; // Fehlermeldung löschen bei neuer Suche
-      });
+  /// Explizite Suche (Button oder Eingabetaste).
+  void _submitSearch() {
+    final query = _addressController.text.trim();
+    if (query.length < 3) {
+      setState(() => _errorMessage = 'Bitte mindestens 3 Zeichen eingeben');
       return;
     }
-
-    // Fehlermeldung löschen bei neuer Suche
-    if (_errorMessage != null) {
-      setState(() {
-        _errorMessage = null;
-      });
-    }
-
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _searchAddressSuggestions(value);
-    });
+    _searchAddressSuggestions(query);
   }
 
   Future<void> _searchAddressSuggestions(String query) async {
     setState(() => _isSearching = true);
 
     try {
-      final service = NominatimService();
       // Suche in ganz Deutschland, nicht nur in aktueller Stadt
-      final results = await service.searchAddresses(
+      final results = await _nominatim.searchAddresses(
         query,
         limit: 10,
         cityName: 'Deutschland',
       );
-      service.dispose();
 
       if (mounted) {
         setState(() {
@@ -1416,16 +1507,22 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _isGeocoding = true;
     });
 
-    // Geocode the selected address
+    // Koordinaten aus dem Suchergebnis uebernehmen – damit ist keine
+    // zweite Anfrage noetig (Nutzungsvorgabe: Anfragen gering halten).
+    final lat = double.tryParse(suggestion['lat']?.toString() ?? '');
+    final lon = double.tryParse(suggestion['lon']?.toString() ?? '');
+    LatLng? center = (lat != null && lon != null) ? LatLng(lat, lon) : null;
+
     try {
-      final service = NominatimService();
-      final center = await service.geocodeAddress(
+      // Nur falls das Ergebnis keine Koordinaten enthaelt, wird geocodiert.
+      center ??= await _nominatim.geocodeAddress(
         normalizedAddress,
         cityName: '$cityName, Deutschland',
       );
-      service.dispose();
 
       if (center != null && mounted) {
+        _selectedCenter = center;
+        _selectedAddress = normalizedAddress;
         // Kamera zur Adresse fliegen lassen
         await _animateToLocation(center);
       }
@@ -1531,12 +1628,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
       try {
         final cityName = context.read<CityModel>().currentCity.name;
-        final service = NominatimService();
-        center = await service.geocodeAddress(
-          _addressController.text.trim(),
-          cityName: '$cityName, Deutschland',
-        );
-        service.dispose();
+        // Bereits ausgewaehlte Adresse nicht erneut geocodieren.
+        if (_selectedCenter != null &&
+            _addressController.text.trim() == _selectedAddress) {
+          center = _selectedCenter;
+        } else {
+          center = await _nominatim.geocodeAddress(
+            _addressController.text.trim(),
+            cityName: '$cityName, Deutschland',
+          );
+        }
 
         if (center == null) {
           setState(() => _errorMessage = 'Adresse nicht gefunden');
@@ -1635,28 +1736,45 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 TextField(
                   controller: _addressController,
                   onChanged: _onAddressChanged,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _submitSearch(),
                   decoration: InputDecoration(
                     labelText: 'Zieladresse',
                     hintText: 'z.B. Alexanderplatz 1',
                     prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _isSearching || _isGeocoding
-                        ? const SizedBox(
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isSearching || _isGeocoding)
+                          const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : _addressController.text.isNotEmpty
-                        ? IconButton(
+                        else if (_addressController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.search),
+                            tooltip: 'Adresse suchen',
+                            onPressed: _submitSearch,
+                          ),
+                        if (_addressController.text.isNotEmpty &&
+                            !_isSearching &&
+                            !_isGeocoding)
+                          IconButton(
                             icon: const Icon(Icons.clear),
+                            tooltip: 'Eingabe löschen',
                             onPressed: () {
                               _addressController.clear();
                               setState(() {
                                 _suggestions = [];
                                 _showSuggestions = false;
+                                _selectedCenter = null;
+                                _selectedAddress = null;
                               });
                             },
-                          )
-                        : null,
+                          ),
+                      ],
+                    ),
                     errorText: _errorMessage,
                   ),
                 ),
@@ -1778,6 +1896,33 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       },
                     ),
                   ),
+                // Quellenangabe für die Adresssuche: sichtbar und verlinkt
+                // (Nutzungsvorgabe von Nominatim/OSM)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4,
+                    children: [
+                      Text(
+                        'Suche & Geocoding: ',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      _AttributionLink(
+                        text: 'Nominatim',
+                        url: 'https://nominatim.org',
+                      ),
+                      Text(
+                        '/',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      _AttributionLink(
+                        text: '© OpenStreetMap-Mitwirkende',
+                        url: 'https://www.openstreetmap.org/copyright',
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
               // Radius Slider

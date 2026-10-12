@@ -14,6 +14,9 @@ import '../services/dresden_parking_service.dart';
 /// Gemeinsamer HTTP Client für alle Services
 final _sharedHttpClient = http.Client();
 
+/// Fabrik für ParkingService-Instanzen (in Tests austauschbar)
+typedef ParkingServiceFactory = ParkingService Function(CityConfig city);
+
 /// Model für die aktuell ausgewählte Stadt
 /// Verwaltet Stadt-Auswahl und Service-Instanz
 class CityModel extends ChangeNotifier {
@@ -36,13 +39,18 @@ class CityModel extends ChangeNotifier {
     await _initializationComplete;
   }
 
-  CityModel() {
+  CityModel({ParkingServiceFactory? serviceFactory})
+    : _serviceFactory = serviceFactory ?? _createDefaultService {
     _service = _createService(_currentCity);
     _initializationComplete = _loadSavedCity();
   }
 
+  final ParkingServiceFactory _serviceFactory;
+
   /// Erstellt den passenden Service für eine Stadt
-  ParkingService _createService(CityConfig city) {
+  ParkingService _createService(CityConfig city) => _serviceFactory(city);
+
+  static ParkingService _createDefaultService(CityConfig city) {
     switch (city.id) {
       case 'berlin':
         return BerlinParkingService(client: _sharedHttpClient);
