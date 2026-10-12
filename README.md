@@ -53,7 +53,7 @@ Finding accessible parking for people with disabilities is currently difficult. 
 
 ### Download
 
-📱 **Android APK**: [Releases](https://codeberg.org/johas/parklibre/releases)
+📱 **Android APK**: [Releases](https://github.com/johasjaguar/parklibre/releases)
 
 Minimum requirement: Android 8.0 (API 26)
 
@@ -83,7 +83,7 @@ The AI models used to create this app (MiniMax, Kimi 2.5, GLM-5) are **not Free 
 
 - [ ] More cities (Hamburg, Cologne, Frankfurt...) and more regions (potentially Overpass API)
 - [ ] Offline caching
-- [ ] Rewrite in Qt
+- [ ] Improve and maintain the Flutter app
 
 ---
 
@@ -121,7 +121,7 @@ Behindertenparkplätze zu finden ist aktuell schwierig. Sie sind zwar z.B. in OS
 
 ### Download
 
-📱 **Android APK**: [Releases](https://codeberg.org/johas/parklibre/releases)
+📱 **Android APK**: [Releases](https://github.com/johasjaguar/parklibre/releases)
 
 Mindestanforderung: Android 8.0 (API 26)
 
@@ -151,7 +151,7 @@ Die KI-Modelle, die zur Erstellung dieser App verwendet wurden (MiniMax, Kimi 2.
 
 - [ ] Mehr Städte (Hamburg, Köln, Frankfurt...) und weitere Regionen (potentiell Overpass API)
 - [ ] Offline-Caching
-- [ ] Neuimplementierung in Qt
+- [ ] Flutter-App verbessern und weiterpflegen
 
 ---
 
@@ -174,7 +174,7 @@ Since this is a learning project, I'm especially interested in:
 - Bug reports
 - Feature requests
 
-Please open an issue on Codeberg.
+Please [open an issue on GitHub](https://github.com/johasjaguar/parklibre/issues).
 
 ---
 
