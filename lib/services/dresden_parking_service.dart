@@ -116,6 +116,9 @@ class DresdenParkingService extends ParkingService {
       // Location: Koordinaten als String (da keine Adresse verfügbar)
       final count = (props[mapping['count']] as num?)?.toInt() ?? 1;
       final nutzungszeit = props[mapping['designation']]?.toString() ?? '';
+      // Nutzungszeiten im Wortlaut; leere Angaben bleiben "keine Angabe"
+      // und werden nie als ganztägige Verfügbarkeit interpretiert.
+      final nutzungszeitTrimmed = nutzungszeit.trim();
       // Koordinaten formatieren als "Ersatz-Adresse"
       final latStr = position.latitude.toStringAsFixed(5);
       final lonStr = position.longitude.toStringAsFixed(5);
@@ -151,6 +154,8 @@ class DresdenParkingService extends ParkingService {
             ? nutzungszeit
             : 'Behindertenparkplatz',
         remark: remark,
+        usageTimes: nutzungszeitTrimmed.isNotEmpty ? nutzungszeitTrimmed : null,
+        timeRestrictions: null,
         count: count,
         policeSection: null,
         location: standort,

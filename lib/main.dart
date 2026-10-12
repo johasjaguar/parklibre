@@ -937,6 +937,28 @@ class _MapScreenState extends State<MapScreen> {
                         value:
                             '${spot.count} ${spot.count == 1 ? 'Platz' : 'Plätze'}',
                       ),
+                      // Zeitliche Angaben im Wortlaut. Fehlende Angaben
+                      // werden nie als ganztägige Verfügbarkeit gedeutet
+                      // und nicht zu "jetzt geöffnet" verarbeitet.
+                      if (spot.usageTimes != null)
+                        _DetailCard(
+                          icon: Icons.schedule,
+                          title: 'Nutzungszeiten',
+                          value: spot.usageTimes!,
+                        ),
+                      if (spot.timeRestrictions != null)
+                        _DetailCard(
+                          icon: Icons.schedule,
+                          title: 'Zeitliche Einschränkungen',
+                          value: spot.timeRestrictions!,
+                        ),
+                      if (spot.usageTimes == null &&
+                          spot.timeRestrictions == null)
+                        const _DetailCard(
+                          icon: Icons.schedule,
+                          title: 'Nutzungszeiten',
+                          value: 'Keine Angaben',
+                        ),
                       if (spot.lastUpdated != null)
                         _DetailCard(
                           icon: Icons.update,

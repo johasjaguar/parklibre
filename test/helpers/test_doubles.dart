@@ -72,6 +72,8 @@ DisabledParkingSpot fakeSpot({
   String location = 'Teststraße 1',
   String? remark,
   String designation = 'Behindertenparkplatz',
+  String? usageTimes,
+  String? timeRestrictions,
   int count = 1,
   AddressSource addressSource = AddressSource.hasAddress,
 }) {
@@ -80,6 +82,8 @@ DisabledParkingSpot fakeSpot({
     district: 'Mitte',
     designation: designation,
     remark: remark,
+    usageTimes: usageTimes,
+    timeRestrictions: timeRestrictions,
     count: count,
     location: location,
     position: position,

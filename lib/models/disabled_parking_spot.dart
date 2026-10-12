@@ -28,6 +28,14 @@ class DisabledParkingSpot {
   final String district;
   final String designation;
   final String? remark;
+
+  /// Zeitliche Angaben im Wortlaut (z.B. "Mo-Fr 8-18h").
+  /// `null` bedeutet: keine Angabe – bewusst KEINE ganztägige Verfügbarkeit.
+  final String? usageTimes;
+
+  /// Zeitliche Einschränkungen im Wortlaut (z.B. "bis 3 Stunden").
+  /// `null` bedeutet: keine Angabe.
+  final String? timeRestrictions;
   final int count;
   final String? policeSection;
   final String location;
@@ -43,6 +51,8 @@ class DisabledParkingSpot {
     required this.district,
     required this.designation,
     this.remark,
+    this.usageTimes,
+    this.timeRestrictions,
     required this.count,
     this.policeSection,
     required this.location,
@@ -99,6 +109,16 @@ class DisabledParkingSpot {
     final geom = json['geometry'] as Map<String, dynamic>?;
     final mapping = config.fieldMapping;
 
+    // Liest ein gemapptes Feld als getrimmten Text; leere Werte werden
+    // als "keine Angabe" (null) behandelt und nie interpretiert.
+    String? readMapped(String key) {
+      final field = mapping[key];
+      if (field == null) return null;
+      final value = props[field]?.toString().trim();
+      if (value == null || value.isEmpty) return null;
+      return value;
+    }
+
     LatLng position;
 
     // ZUERST: Versuche explizite Koordinatenfelder (gps_lat/gps_lon)
@@ -151,6 +171,8 @@ class DisabledParkingSpot {
       remark: mapping['remark'] != null
           ? props[mapping['remark']]?.toString()
           : null,
+      usageTimes: readMapped('usageTimes'),
+      timeRestrictions: readMapped('timeRestrictions'),
       count: (props[mapping['count']] as num?)?.toInt() ?? 1,
       policeSection: mapping['policeSection'] != null
           ? props[mapping['policeSection']]?.toString()
