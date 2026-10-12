@@ -8,8 +8,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter/foundation.dart';
 
 class LocationService {
-  static const _berlinCenter = LatLng(52.52, 13.405);
-
   StreamSubscription<Position>? _positionStream;
   Position? _lastPosition;
 
@@ -55,10 +53,11 @@ class LocationService {
 
   Future<LatLng?> getCurrentLocation() async {
     if (defaultTargetPlatform == TargetPlatform.linux) {
-      debugPrint(
-        '[LocationService] Linux - returning mock location (Berlin Mitte)',
-      );
-      return _berlinCenter;
+      // Auf Linux gibt es keinen Standortdienst. Bewusst "kein Standort"
+      // statt eines erfundenen Ortes – Anwender:innen werden in der UI
+      // verstaendlich informiert.
+      debugPrint('[LocationService] Linux platform - no location available');
+      return null;
     }
 
     try {
@@ -98,7 +97,8 @@ class LocationService {
 
   Stream<LatLng> getLocationStream() {
     if (defaultTargetPlatform == TargetPlatform.linux) {
-      return Stream.value(_berlinCenter);
+      // Kein Standortdienst: leerer Stream statt eines erfundenen Ortes.
+      return const Stream<LatLng>.empty();
     }
 
     return Geolocator.getPositionStream(
@@ -118,7 +118,8 @@ class LocationService {
 
   void startLocationUpdates(Function(LatLng) onLocationUpdate) {
     if (defaultTargetPlatform == TargetPlatform.linux) {
-      Future.microtask(() => onLocationUpdate(_berlinCenter));
+      // Kein Standortdienst: keine Updates mit erfundenem Ort ausloesen.
+      debugPrint('[LocationService] Linux platform - no location updates');
       return;
     }
 

@@ -42,7 +42,7 @@ class FakeParkingService extends ParkingService {
           ),
         );
 
-  final List<DisabledParkingSpot> spots;
+  List<DisabledParkingSpot> spots;
   final Duration delay;
   int fetchCount = 0;
 

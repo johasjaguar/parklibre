@@ -128,6 +128,7 @@ class ParkingSpotsModel extends ChangeNotifier {
   FilterCriteria? _currentFilter;
   bool _isFilterActive = false;
   int _loadCounter = 0; // Force rebuild on change
+  int _loadGeneration = 0; // Erkennt veraltete Ladungen (Stadtwechsel)
 
   List<DisabledParkingSpot> get spots =>
       _isFilterActive ? _filteredSpots : _spots;
@@ -143,51 +144,55 @@ class ParkingSpotsModel extends ChangeNotifier {
     if (_service != service) {
       _service?.dispose();
       _service = service;
+      // Beim Stadtwechsel keine veralteten Ergebnisse und keinen
+      // veralteten Filter aus der vorherigen Stadt uebernehmen.
+      _loadGeneration++;
       _spots = [];
       _filteredSpots = [];
       _isFilterActive = false;
+      _currentFilter = null;
       _loadCounter++;
       notifyListeners();
     }
   }
 
   Future<void> loadSpots() async {
-    if (_isLoading || _service == null) return;
+    final service = _service;
+    if (service == null) return;
 
+    // Jede Ladung ist die neueste: laufende Ladungen werden veraltet.
+    final generation = ++_loadGeneration;
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _spots = await _service!.fetchAllSpots();
-      _filteredSpots = [];
-      _isFilterActive = false;
+      final fetched = await service.fetchAllSpots();
+      if (generation != _loadGeneration) return; // veraltet, verwerfen
+      _spots = fetched;
+      // Aktiven Filter nach dem (Neu-)Laden derselben Stadt erneut anwenden.
+      _reapplyCurrentFilter();
       _loadCounter++;
     } catch (e) {
+      if (generation != _loadGeneration) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
-  void applyFilter(FilterCriteria filter) {
-    if (!filter.isValid) {
-      clearFilter();
+  /// Wendet den aktuellen Filter auf [_spots] an (oder setzt ihn zurueck).
+  void _reapplyCurrentFilter() {
+    final filter = _currentFilter;
+    if (filter == null || !filter.isValid) {
+      _filteredSpots = [];
+      _isFilterActive = false;
       return;
     }
-
-    final center = filter.mode == FilterMode.currentLocation
-        ? filter.center
-        : filter.center;
-
-    if (center == null) {
-      clearFilter();
-      return;
-    }
-
-    _currentFilter = filter;
-    _isFilterActive = true;
+    final center = filter.center!;
     _filteredSpots = _spots.where((spot) {
       final distance = DistanceCalculator.calculateDistance(
         spot.position,
@@ -195,6 +200,18 @@ class ParkingSpotsModel extends ChangeNotifier {
       );
       return distance <= filter.radiusMeters;
     }).toList();
+    _isFilterActive = true;
+  }
+
+  void applyFilter(FilterCriteria filter) {
+    if (!filter.isValid) {
+      // Ohne gueltiges Zentrum (z.B. kein Standort) wird nicht gefiltert.
+      clearFilter();
+      return;
+    }
+
+    _currentFilter = filter;
+    _reapplyCurrentFilter();
 
     notifyListeners();
   }
@@ -1604,16 +1621,19 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         await locationModel.getCurrentLocation();
       }
 
-      center = locationModel.currentLocation ?? const LatLng(52.52, 13.405);
+      center = locationModel.currentLocation;
 
-      if (locationModel.currentLocation == null && mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Standort nicht verfügbar, verwende Berlin Mitte'),
-            duration: Duration(seconds: 8),
-          ),
-        );
+      if (center == null) {
+        // Kein erfundener Standort (weder Berlin noch Stadtmittelpunkt):
+        // es wird nicht gefiltert, sondern verstaendlich gemeldet.
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                'Standort nicht verfügbar. Bitte Standortberechtigung '
+                'erteilen oder stattdessen eine Zieladresse verwenden.';
+          });
+        }
+        return;
       }
     } else {
       if (_addressController.text.trim().isEmpty) {
@@ -1731,6 +1751,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 },
               ),
               const SizedBox(height: 24),
+              // Meldung bei fehlendem Standort (Modus "Meine Position")
+              if (_mode == FilterMode.currentLocation && _errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    _errorMessage!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               // Adress-Eingabe (nur bei targetAddress)
               if (_mode == FilterMode.targetAddress) ...[
                 TextField(

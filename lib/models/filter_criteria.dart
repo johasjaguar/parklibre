@@ -40,8 +40,13 @@ class FilterCriteria {
   }
 
   bool get isValid {
+    // Ohne echtes Zentrum darf nicht gefiltert werden – insbesondere
+    // nicht mit einem erfundenen oder dem Stadtmittelpunkt.
+    if (center == null) {
+      return false;
+    }
     if (mode == FilterMode.targetAddress) {
-      return center != null && address != null && address!.isNotEmpty;
+      return address != null && address!.isNotEmpty;
     }
     return true;
   }
