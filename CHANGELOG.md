@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-10-12
+### Added
+- **Usage times:** Spot details show temporal information verbatim as
+  "Nutzungszeiten"/"Zeitliche Einschränkungen". Missing values are shown
+  as "Keine Angaben" and never interpreted as all-day availability; no
+  "currently open" status is computed.
+- **Attribution:** Visible, linked source credits for OpenStreetMap and
+  Nominatim on the map and in the address search.
+### Changed
+- **Address search:** Autocomplete replaced by an explicit search (button
+  or Enter) per the Nominatim usage policy; results stay selectable and
+  reuse their coordinates without a second request.
+- **Service usage:** All geocoding requests run through one shared service
+  (max. 1 request/second, reverse results cached and shared). Service
+  endpoints configurable without an update via --dart-define
+  (NOMINATIM_BASE_URL, OSM_TILE_URL).
+### Fixed
+- **Dresden:** Umlauts are decoded correctly (explicit UTF-8, the service
+  sends no charset) and spot IDs are taken from the OGC API feature level
+  (all 481 IDs were empty before).
+- **Location filter:** No fabricated position ("Berlin Mitte") anymore –
+  a missing location now shows an understandable message instead of
+  filtering with a wrong position. Active filters are reapplied after
+  reloading, and city switches no longer keep stale results.
+
 ## [0.5.0] - 2026-03-07
 ### Added
 - New **"Navigate to next parking spot"** 1 tap button
